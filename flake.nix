@@ -23,11 +23,13 @@
        ];
 
       shellHook = ''
+        
         if [ -d "/home/xis/src/f1dev/f1dev2/f1tnr-app" ]; then
-	  echo -e "${GREEN}[+]-> Ready <-[+]  
+	  echo -e "'\033[0;32m'[+]-> Ready <-[+]"  
 	else
-	  npx create-next-app@latest f1tnr-app --typescript --tailwind --eslint
-	  npx shadcn-ui@latest init -y
+	  npx create-next-app@latest f1tnr-app --typescript --tailwind --eslint	 
+	  cd /home/xis/src/f1dev/f1dev2/f1tnr-app 
+	  npx shadcn-ui@latest init -y -c f1tnr-app/
 	fi
            '';
     };
