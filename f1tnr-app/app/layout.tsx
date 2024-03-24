@@ -18,6 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+
       <body className={inter.className}>
       <ThemeProvider
       attribute="class"
@@ -25,18 +26,19 @@ export default function RootLayout({
       enableSystem
       disableTransitionOnChange>
 
-        <div className="grid grid-cols-4 gap-1">
-          <br />
-          <h2>hello</h2>
-          <h2>hello</h2>
-          <ModeToggle></ModeToggle>
+        <div className="grid grid-col-8">
+          <div className="col-start-7 ml-8 mt-2"><h1 className="">F1</h1></div>
+          <div className="col-start-12 mt-1 mb-1"><ModeToggle></ModeToggle></div>
         </div>
+        
         <Separator />
-        <br />
+        <div className="relative">
+          <div className="absolute top-2 right-8"></div>
+        </div>
         {children}
-
-      </ThemeProvider>
+        </ThemeProvider>
       </body>
+     
     </html>
   );
 }
