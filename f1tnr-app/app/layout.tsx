@@ -32,9 +32,6 @@ export default function RootLayout({
         </div>
         
         <Separator />
-        <div className="relative">
-          <div className="absolute top-2 right-8"></div>
-        </div>
         {children}
         </ThemeProvider>
       </body>
