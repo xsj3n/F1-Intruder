@@ -4,8 +4,6 @@ use futures::future::join_all;
 use rustls::{RootCertStore, ClientConfig};
 use tokio::{net::TcpStream, io::{AsyncWriteExt, AsyncReadExt}};
 use tokio::task::JoinHandle;
-use pyo3::prelude::*;
-use crate::PythonCallback;
 use crate::{interface_structs::{HttpResponseDataC, RequestandPermutation}, log::dbg_log_progress, DOMAIN_BUF};
 
 
@@ -24,7 +22,7 @@ enum HttpStatus
     NotDone
 }
 
-pub async fn start_taskmaster(domain_string: String, mut request_perumation_buffer: RequestandPermutation, reqs_per_thread: u32, pycb: PythonCallback) 
+pub async fn start_taskmaster(domain_string: String, mut request_perumation_buffer: RequestandPermutation, reqs_per_thread: u32) 
 {
   
 
@@ -43,12 +41,12 @@ pub async fn start_taskmaster(domain_string: String, mut request_perumation_buff
     {
         let root_store_dup = root_store.clone();
         let d_s = domain_string.clone();
-        let cb = pycb.cb.clone();
+       
 
         
         straggler_kq_v.push(tokio::spawn(async move 
         {
-            start_worker(d_s,rp , root_store_dup, cb).await;
+            start_worker(d_s,rp , root_store_dup).await;
 
         }));
     }
@@ -121,7 +119,7 @@ fn fill_child_vectors(v: &mut RequestandPermutation, wrk: &WorkerLoad) -> Vec<Re
     return vector_collection;
 }
 
-async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutation, root_store: RootCertStore, pycb: Py<PyAny>) -> ()
+async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutation, root_store: RootCertStore) -> ()
 {
    
     // this just lets jus boot our connection back up if we get our connection closed on us
@@ -184,8 +182,8 @@ async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutat
                 let _bytes_read = t.read(&mut rd_buf[..]).await.unwrap();
                 if _bytes_read == 0 
                 { 
-                    let cb_dup = pycb.clone();
-                    straggler_kq_v.push(kq_straggler(d_s.clone(), &rs, root_store.clone(),cb_dup));
+            
+                    straggler_kq_v.push(kq_straggler(d_s.clone(), &rs, root_store.clone()));
                     resume += 1;
                     continue 'worker_start;
                 } // TODO: we would log a failure
@@ -333,7 +331,7 @@ async fn determine_body_sz_in_accum(accum: &[u8]) -> isize
 }
 
 
-fn kq_straggler(d_s: String,rs: &str, root_store: RootCertStore, pycb: Py<PyAny>) -> JoinHandle<()>
+fn kq_straggler(d_s: String,rs: &str, root_store: RootCertStore) -> JoinHandle<()>
 {
     let r = RequestandPermutation
     {
@@ -344,7 +342,7 @@ fn kq_straggler(d_s: String,rs: &str, root_store: RootCertStore, pycb: Py<PyAny>
     println!("Spawning KQ Task due to connection closed>>>>");
     return tokio::spawn(async move 
         {
-            start_worker(d_s, r, root_store, pycb).await;
+            start_worker(d_s, r, root_store).await;
         });
 }
 

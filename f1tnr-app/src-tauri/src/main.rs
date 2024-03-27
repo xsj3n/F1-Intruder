@@ -50,7 +50,7 @@ fn send_com_async(request_buffer: Vec<String>, permutation_buffer: Vec<String>) 
     {
         let tsk_d_str = DOMAIN_BUF.with(|d: &Arc<RefCell<String>>| { d.borrow_mut().clone() } );
     
-        async_net_spx::start_taskmaster(tsk_d_str, request_permutation_buffer, 15, cb).await;
+        async_net_spx::start_taskmaster(tsk_d_str, request_permutation_buffer, 15).await;
     });
     
     /* 

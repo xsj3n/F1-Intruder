@@ -36,6 +36,11 @@
         libsoup
         webkitgtk
         librsvg
+	cmake
+	llvmPackages_17.libcxxClang
+	perl
+	go
+
       ];
       
       pkgs = import nixpkgs { inherit system overlays; } ;

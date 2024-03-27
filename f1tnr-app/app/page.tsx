@@ -12,11 +12,15 @@ export default function Home() {
   return (
     <main>
       <div className="grid grid-col-2 grid-flow-col">
-        <div className="min-h-full"><Textarea></Textarea></div>
-        <div className="mt-2"><Combobox></Combobox></div>
+        <div className="min-h-full">
+          <Textarea></Textarea>\
+        </div>
+        <div className="mt-2">
+          <Combobox></Combobox>
+        </div>
         <div>
-        <Button variant="outline"></Button>
-        <Button variant="outline"></Button>
+          <Button variant="outline"></Button>
+          <Button variant="outline"></Button>
         </div>
       </div>
     </main>
