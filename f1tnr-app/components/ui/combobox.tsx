@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
-
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,7 +28,7 @@ const payload_t = [
   },
 ]
 
-export function Combobox() {
+export function Combobox({setPayloadOpt}: any) {
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState<String>("")
 
@@ -58,6 +57,7 @@ export function Combobox() {
                 onSelect={(currentValue) => {
                   setValue(currentValue === value ? "" : currentValue)
                   setOpen(false)
+                  setPayloadOpt(currentValue)
                 }}
               >
                 <Check
