@@ -17,11 +17,14 @@ export default function Home() {
     if (payloadopt == "wordlist")
     {
       return (
-      <div>
-        <Button variant={"outline"}>Load</Button>
-        <Button variant={"outline"}>Clear</Button>
-        <Button variant={"outline"}>Remove</Button>
-      </div>)
+      <div className="grid grid-cols-3 gap-0.5">
+        <div><Button variant={"outline"}>Load</Button></div>
+        <div><Button variant={"outline"}>Clear</Button></div>
+        <div><Button variant={"outline"}>Remove</Button></div>
+      </div>
+      
+      
+      )
     }
   
     if (payloadopt == "numbers")
@@ -36,14 +39,18 @@ export default function Home() {
 
   return (
     <main>
-      <div className="grid grid-col-2 grid-flow-col">
+      <div className="grid grid-col-2 grid-flow-col gap-4">
         <div className="min-h-full">
-          <Textarea></Textarea>\
+          <Textarea></Textarea>
         </div>
-        <div className="mt-2" id="cb">
-          <Combobox setPayloadOpt={setPayloadOpt}></Combobox>
+        <div className="mt-3 grid-rows-2 gap-5" id="cb">
+          <div className="mb-3">
+            <Combobox setPayloadOpt={setPayloadOpt}></Combobox>
+          </div>
+          <div>
+            {LoadPayloadOpts()}
+          </div>
         </div>
-        {LoadPayloadOpts()}
       </div>
     </main>
   );
