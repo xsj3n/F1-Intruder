@@ -4,32 +4,44 @@ import Image from "next/image";
 import { Textarea } from "@/components/ui/textarea"
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data_table";
+import { string_columns } from "@/components/ui/s_columns";
+import { open } from '@tauri-apps/api/dialog'
 import React from "react";
 
-
-
+async function r_open()
+{
+  const selected = await open({});
+  
+}
 
 
 export default function Home() {
+  const [payloadstrs, setPayloadstrs] = React.useState<String[]>([])
   const [payloadopt, setPayloadOpt] = React.useState("Word List")
   function LoadPayloadOpts()
   {
     if (payloadopt == "wordlist")
     {
+      
+      
       return (
       <div className="grid grid-cols-3 gap-0.5">
-        <div><Button variant={"outline"}>Load</Button></div>
+        <div><Button variant={"outline"} onClick={r_open}>Load</Button></div>
         <div><Button variant={"outline"}>Clear</Button></div>
         <div><Button variant={"outline"}>Remove</Button></div>
+        <div className="mt-4 col-span-2"><DataTable columns={string_columns} data={payloadstrs}></DataTable></div>
       </div>
-      
-      
       )
     }
   
     if (payloadopt == "numbers")
     {
-      return (<h1>Numbers</h1>)
+      return (
+        <div className="grid grid-rows-3 gap-0.5">
+          <div></div>
+        </div>
+      )
     }
 
     return (<h1>Fell through</h1>)

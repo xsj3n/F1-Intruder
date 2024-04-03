@@ -2,12 +2,7 @@
 
 import { ColumnDef } from "@tanstack/react-table"
 
-export const string_columns: ColumnDef<String>[] = [
-    {
-        accessorKey: "payload",
-        header: "Payload"
-    }
-]
+
 
 export type HttpData = {
     payload: String,
@@ -27,5 +22,16 @@ export const http_columns: ColumnDef<HttpData>[] = [
     {
         accessorKey: "length",
         header: "Length"
+    }
+]
+
+export const string_columns: ColumnDef<String>[] = [
+    {
+        accessorKey: "payload",
+        header: "Payload",
+        cell: ({row}) => 
+        {
+           return (<>{row}</>)
+        }
     }
 ]

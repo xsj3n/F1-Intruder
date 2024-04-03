@@ -58,6 +58,8 @@
 
          buildInputs = build_inp;
 
+	 RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";			
+
         shellHook = ''
           export WEBKIT_DISABLE_COMPOSITING_MODE=1
 	  export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
