@@ -6,6 +6,7 @@ use interface_structs::{HttpResponseDataC, RequestandPermutation};
 use log::dbg_log_progress;
 use parse_util::parse_host_from_cache_data;
 use std::cell::RefCell;
+use std::fs::read_to_string;
 use std::num::IntErrorKind;
 use std::sync::Arc;
 
@@ -28,6 +29,18 @@ fn main() {
 
 thread_local!{ static DOMAIN_BUF: Arc<RefCell<String>> = Arc::new(RefCell::new(String::new())); }
 //pub type Callback = Option< extern "C" fn(hrdc: HttpResponseDataC, permuation: String, row_num: u16) -> bool>;
+
+
+#[tauri::command]
+fn readfile_lines(dirstr: String) -> Vec<String>
+{
+    let mut result: Vec<String> = Vec::new();
+
+    let lines = read_to_string(dirstr).unwrap()
+    .lines().map(|l| result.push(l.into()));
+    
+    return result;
+}
 
 #[tauri::command]
 fn send_com_async(request_buffer: Vec<String>, permutation_buffer: Vec<String>) -> ()

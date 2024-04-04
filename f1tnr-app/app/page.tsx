@@ -7,12 +7,28 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data_table";
 import { string_columns } from "@/components/ui/s_columns";
 import { open } from '@tauri-apps/api/dialog'
-import React from "react";
+import { invoke } from '@tauri-apps/api/tauri'
+import { emit, listen } from '@tauri-apps/api/event'
+import React, { useEffect } from "react";
+
+const table_unlisten = await listen("table_p", (event) => 
+{
+  
+}) 
 
 async function r_open()
 {
   const selected = await open({});
-  
+
+  if (!Array.isArray(selected))
+  {
+    useEffect(() => 
+    {
+      invoke<String>("readfile_lines", { dirstr: selected})
+    }, [])
+  }
+
+  return;
 }
 
 
@@ -27,7 +43,7 @@ export default function Home() {
       
       return (
       <div className="grid grid-cols-3 gap-0.5">
-        <div><Button variant={"outline"} onClick={r_open}>Load</Button></div>
+        <div><Button variant={"outline"} onClick={({}) => r_open()}>Load</Button></div>
         <div><Button variant={"outline"}>Clear</Button></div>
         <div><Button variant={"outline"}>Remove</Button></div>
         <div className="mt-4 col-span-2"><DataTable columns={string_columns} data={payloadstrs}></DataTable></div>
@@ -67,5 +83,4 @@ export default function Home() {
     </main>
   );
 }
-
 
