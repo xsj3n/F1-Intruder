@@ -10,6 +10,9 @@ use std::fs::read_to_string;
 use std::num::IntErrorKind;
 use std::sync::Arc;
 
+use tauri::http::ResponseBuilder;
+use tauri::Manager;
+
 //use crate::net_spx::*;
 use crate::parse_util::__permutate_request__;
 use crate::interface_structs::*;
