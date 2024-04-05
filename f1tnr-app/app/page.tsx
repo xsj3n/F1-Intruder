@@ -12,6 +12,18 @@ import { invoke } from '@tauri-apps/api/tauri'
 import { emit, listen } from '@tauri-apps/api/event'
 import { readTextFile, BaseDirectory } from '@tauri-apps/api/fs';
 import React, { useEffect } from "react";
+import { Separator } from "@/components/ui/separator"
+import { Label } from "@/components/ui/label";
+
+
+function LabeledSeparator(label: String) : React.JSX.Element
+{
+  return (
+  
+          <><div><h2>{label}</h2></div><div className="w-1/2 mb-3 mt-1"> <Separator></Separator> </div></>
+    
+  )
+}
 
 
 
@@ -24,12 +36,13 @@ export default function Home() {
 
 
 
-  const readcache = async function()
+  const readcache = async function() 
   {
-    const path = "/home/xis/request.txt"
+    const path = "/home/xis/Documents/request.txt"
     const content = await readTextFile(path).then((s) => s)
-    
-    return content
+    console.log(content)
+    setInitialr(content)
+
 
   }
 
@@ -79,27 +92,28 @@ export default function Home() {
     }
 
     return (<></>)
-
   }
 
-
+  readcache()
 
   return (
     <main>
       <div className="grid grid-col-2 grid-flow-col gap-4">
         <div className="min-h-full">
-          <Textarea onLoad={readcache}></Textarea>
+          <Textarea defaultValue={initalr}></Textarea>
         </div>
         <div className="mt-3 grid-rows-2 gap-5" id="cb">
-          <div className="mb-3">
-            <Combobox setPayloadOpt={setPayloadOpt}></Combobox>
-          </div>
-          <div>
-            {LoadPayloadOpts()}
-          </div>
+          {LabeledSeparator("Payload options")}
+          <div className="mb-3"> <Combobox setPayloadOpt={setPayloadOpt}></Combobox> </div>
+          <div>{LoadPayloadOpts()}</div>
+          <div></div>
+          <br />
+          {LabeledSeparator("Threading options")}
+          <div className=""><Input className="w-6/12" type="Number of requests per thread" placeholder="Number of requests per thread"></Input></div>
         </div>
       </div>
     </main>
   );
 }
+
 

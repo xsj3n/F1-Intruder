@@ -50,8 +50,8 @@ export const string_columns: ColumnDef<String>[] = [
         enableHiding: false,
     },
     {
-        accessorKey: "payload",
-        header: "Payload",
+        accessorKey: "payload strings",
+        header: "Payload strings",
         cell: ({row}) => 
         {
             let r = row.original
