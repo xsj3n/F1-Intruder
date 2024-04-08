@@ -4,6 +4,9 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/ui/modetoggle";
+import { Button } from "@/components/ui/button";
+import { GoArrowRight } from "react-icons/go";
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -26,9 +29,10 @@ export default function RootLayout({
       enableSystem
       disableTransitionOnChange>
 
-        <div className="grid grid-col-8">
-          <div className="col-start-7 ml-8 mt-2"><h1 className="">F1</h1></div>
-          <div className="col-start-12 mt-1 mb-1"><ModeToggle></ModeToggle></div>
+        <div className="flex justify-between mt-2 mb-2">
+          {/*<div className="col-start-7 ml-8 mt-2"><h1 className="">F1</h1></div>*/}
+          <div className="ml-4"><ModeToggle></ModeToggle></div>
+          <div className="mr-4"><Button variant="outline"><GoArrowRight></GoArrowRight></Button></div>
         </div>
         
         <Separator />

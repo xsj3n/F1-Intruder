@@ -11,9 +11,10 @@ import { open } from '@tauri-apps/api/dialog'
 import { invoke } from '@tauri-apps/api/tauri'
 import { emit, listen } from '@tauri-apps/api/event'
 import { readTextFile, BaseDirectory } from '@tauri-apps/api/fs';
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 function LabeledSeparator(label: String) : React.JSX.Element
@@ -30,10 +31,13 @@ function LabeledSeparator(label: String) : React.JSX.Element
 
 export default function Home() {
 
-  const [initalr, setInitialr] = React.useState("")
-  const [payloadstrs, setPayloadstrs] = React.useState<String[]>([])
-  const [payloadopt, setPayloadOpt] = React.useState("Word List")
+  
 
+  const [initalr, setInitialr] = useState("")
+  const [payloadstrs, setPayloadstrs] = useState<String[]>([])
+  const [payloadopt, setPayloadOpt] = useState("Word List")
+  const [payloadsignlestr, setPayloadsinglestr] = useState("")
+  const stringaddref = useRef<HTMLInputElement>(null)
 
 
   const readcache = async function() 
@@ -46,7 +50,7 @@ export default function Home() {
 
   }
 
-  const r_open = async function()
+  const wl_open = async function()
   {
     const selected = await open({});
 
@@ -62,7 +66,47 @@ export default function Home() {
     await setPayloadstrs(data)
 
   }
+
   
+
+
+
+  const handlestringaddinput = async function (e:  React.ChangeEvent<HTMLInputElement>)
+  {
+    e.preventDefault()
+    if (e.target.value == "") 
+    {
+      
+      return
+    }
+    setPayloadsinglestr(e.target.value)
+  }
+
+  const handlestringaddst = async function () {
+
+    if (payloadsignlestr == "") {return}
+
+    payloadstrs.push(payloadsignlestr)
+    let data = payloadstrs.slice(0)
+    
+    setPayloadstrs(data) 
+    if (stringaddref.current != null)
+    {
+      stringaddref.current.value = ""
+    }
+  }
+
+  const clearpayloadstrs = async function ()
+  {
+    let data: String[] = []
+    setPayloadsinglestr("")
+    setPayloadstrs(data)
+  }
+
+
+  
+  
+ 
 
   function LoadPayloadOpts()
   {
@@ -71,12 +115,19 @@ export default function Home() {
       
       
       return (
+      <div>
       <div className="grid grid-cols-3 gap-0.5">
-        <div><Button variant={"outline"} onClick={r_open}>Load</Button></div>
-        <div><Button variant={"outline"}>Clear</Button></div>
+        <div><Button variant={"outline"} onClick={wl_open}>Load</Button></div>
+        <div><Button variant={"outline"} onClick={clearpayloadstrs}>Clear</Button></div>
         <div><Button variant={"outline"}>Remove</Button></div>
         <div className="mt-4 col-span-2"><DataTable columns={string_columns} data={payloadstrs}></DataTable></div>
+      </div >
+        <div className="flex mt-2">
+          <Input ref={stringaddref} onChange={handlestringaddinput} type="Add payload string" placeholder="Add payload string" className="mr-2"></Input>
+          <Button variant="outline" onClick={handlestringaddst}>Add </Button>
+        </div>
       </div>
+      
       )
     }
 
@@ -110,6 +161,7 @@ export default function Home() {
           <br />
           {LabeledSeparator("Threading options")}
           <div className=""><Input className="w-6/12" type="Number of requests per thread" placeholder="Number of requests per thread"></Input></div>
+          
         </div>
       </div>
     </main>
