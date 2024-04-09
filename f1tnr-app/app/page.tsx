@@ -38,6 +38,7 @@ export default function Home() {
   const [payloadopt, setPayloadOpt] = useState("Word List")
   const [payloadsignlestr, setPayloadsinglestr] = useState("")
   const stringaddref = useRef<HTMLInputElement>(null)
+  
 
 
   const readcache = async function() 
@@ -67,10 +68,6 @@ export default function Home() {
 
   }
 
-  
-
-
-
   const handlestringaddinput = async function (e:  React.ChangeEvent<HTMLInputElement>)
   {
     e.preventDefault()
@@ -84,16 +81,21 @@ export default function Home() {
 
   const handlestringaddst = async function () {
 
-    if (payloadsignlestr == "") {return}
-
-    payloadstrs.push(payloadsignlestr)
-    let data = payloadstrs.slice(0)
-    
-    setPayloadstrs(data) 
-    if (stringaddref.current != null)
+    function addthenclear()
     {
-      stringaddref.current.value = ""
+      
+      payloadstrs.push(payloadsignlestr)
+      let data = payloadstrs.slice(0)
+      
+      setPayloadstrs(data) 
+      if (stringaddref.current != null)
+      {
+        stringaddref.current.value = ""
+      }
     }
+
+    if (payloadsignlestr == "" || payloadsignlestr == payloadstrs.slice(-1)[0]) {return}
+    addthenclear()
   }
 
   const clearpayloadstrs = async function ()
@@ -102,11 +104,6 @@ export default function Home() {
     setPayloadsinglestr("")
     setPayloadstrs(data)
   }
-
-
-  
-  
- 
 
   function LoadPayloadOpts()
   {
@@ -145,6 +142,7 @@ export default function Home() {
     return (<></>)
   }
 
+  
   readcache()
 
   return (
