@@ -25,6 +25,11 @@ pub mod parse_util;
 
 fn main() {
   tauri::Builder::default()
+    .register_uri_scheme_protocol("lbp", |app,
+    request|
+    {
+        tauri::http::ResponseBuilder::new().status(220).body(request.body().to_vec())
+    })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
   }

@@ -25,7 +25,11 @@
         "all": true,
         "scope": 
           ["**", "**/*", "/**/*"]
-        
+      },
+      "http": {
+        "all": true,
+        "request": false,
+        "scope": ["lbp://*"]
       }
     },
     "bundle": {

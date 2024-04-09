@@ -15,31 +15,26 @@ import React, { useEffect, useRef, useState } from "react";
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { fetch } from '@tauri-apps/api/http';
 
 
-function LabeledSeparator(label: String) : React.JSX.Element
-{
-  return (
-  
-          <><div><h2>{label}</h2></div><div className="w-1/2 mb-3 mt-1"> <Separator></Separator> </div></>
-    
-  )
-}
-
-
+// reducer needed for this component 
 
 
 export default function Home() {
-
-  
 
   const [initalr, setInitialr] = useState("")
   const [payloadstrs, setPayloadstrs] = useState<String[]>([])
   const [payloadopt, setPayloadOpt] = useState("Word List")
   const [payloadsignlestr, setPayloadsinglestr] = useState("")
   const stringaddref = useRef<HTMLInputElement>(null)
-  
 
+  function LabeledSeparator(label: String) : React.JSX.Element
+  {
+    return (
+      <><div><h2>{label}</h2></div><div className="w-1/2 mb-3 mt-1"> <Separator></Separator> </div></>
+    )
+  }
 
   const readcache = async function() 
   {
@@ -142,9 +137,13 @@ export default function Home() {
     return (<></>)
   }
 
-  
-  readcache()
+  async function test() {
+    let s = await fetch("lbp://localhost:3000/test")
+    console.log(s)
+  }
 
+  readcache()
+  test()
   return (
     <main>
       <div className="grid grid-col-2 grid-flow-col gap-4">
@@ -159,7 +158,9 @@ export default function Home() {
           <br />
           {LabeledSeparator("Threading options")}
           <div className=""><Input className="w-6/12" type="Number of requests per thread" placeholder="Number of requests per thread"></Input></div>
-          
+          {
+            
+          }
         </div>
       </div>
     </main>
