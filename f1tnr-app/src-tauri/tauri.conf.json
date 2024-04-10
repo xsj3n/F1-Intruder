@@ -4,7 +4,8 @@
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
     "devPath": "http://localhost:3000",
-    "distDir": "../out"
+    "distDir": "../out",
+    "withGlobalTauri": true
   },
   "package": {
     "productName": "f1tnr-app",
@@ -28,8 +29,8 @@
       },
       "http": {
         "all": true,
-        "request": false,
-        "scope": ["lbp://*"]
+        "request": true,
+        "scope": ["https://**"]
       }
     },
     "bundle": {
@@ -66,7 +67,10 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self'",
+				"style-src": "'self'"
+      }
     },
     "updater": {
       "active": false
@@ -79,6 +83,7 @@
         "title": "F1TNR",
         "width": 800
       }
+      
     ]
   }
 }

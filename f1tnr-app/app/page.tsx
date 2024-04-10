@@ -15,7 +15,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { fetch } from '@tauri-apps/api/http';
 
 
 // reducer needed for this component 
@@ -23,11 +22,22 @@ import { fetch } from '@tauri-apps/api/http';
 
 export default function Home() {
 
+  const [serverstate, setServerstate] = useState(false)
+  
+  if (serverstate == false)
+  {
+    invoke("start_ipc_server")
+    setServerstate(true)
+  }
+
+
   const [initalr, setInitialr] = useState("")
   const [payloadstrs, setPayloadstrs] = useState<String[]>([])
   const [payloadopt, setPayloadOpt] = useState("Word List")
   const [payloadsignlestr, setPayloadsinglestr] = useState("")
+  const [wsocket, setWSocket] = useState(new WebSocket("ws://127.0.0.1:3001"))
   const stringaddref = useRef<HTMLInputElement>(null)
+  
 
   function LabeledSeparator(label: String) : React.JSX.Element
   {
@@ -137,13 +147,16 @@ export default function Home() {
     return (<></>)
   }
 
-  async function test() {
-    let s = await fetch("lbp://localhost:3000/test")
-    console.log(s)
-  }
 
-  readcache()
-  test()
+
+  
+
+  
+  wsocket.addEventListener("open", e => {console.log("connected via ws!")})
+  wsocket.addEventListener("message", e => {console.log("received msg: ", e.data)})
+  wsocket.addEventListener("close", e => {console.log("disconnected via ws!")})
+  
+  
   return (
     <main>
       <div className="grid grid-col-2 grid-flow-col gap-4">
@@ -158,9 +171,7 @@ export default function Home() {
           <br />
           {LabeledSeparator("Threading options")}
           <div className=""><Input className="w-6/12" type="Number of requests per thread" placeholder="Number of requests per thread"></Input></div>
-          {
-            
-          }
+         
         </div>
       </div>
     </main>

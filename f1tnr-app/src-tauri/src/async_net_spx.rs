@@ -1,11 +1,19 @@
-use std::sync::Arc;
+use core::time;
+use std::thread::sleep;
+use std::{fs::read, sync::Arc};
 use std::io::Write;
-use futures::future::join_all;
+use futures::{StreamExt, TryStreamExt};
+use tauri::async_runtime;
+use tokio::net::{TcpListener, TcpSocket, TcpStream as tTcpStream};
+use futures::{future::join_all, SinkExt, TryFutureExt};
 use rustls::{RootCertStore, ClientConfig};
 use tokio::{net::TcpStream, io::{AsyncWriteExt, AsyncReadExt}};
 use tokio::task::JoinHandle;
+
 use crate::{interface_structs::{HttpResponseDataC, RequestandPermutation}, log::dbg_log_progress, DOMAIN_BUF};
 
+use tokio_tungstenite::accept_hdr_async;
+use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
 
 // ASYNC RE_WRITE===
 struct WorkerLoad
@@ -22,8 +30,46 @@ enum HttpStatus
     NotDone
 }
 
+async fn process(socket: TcpStream)
+{
+    
+}
+
+
+async fn start_ipc_server()
+{
+    let socket = TcpSocket::new_v4().unwrap();
+    socket.set_keepalive(true).unwrap();
+    socket.set_reuseaddr(true).unwrap();
+    socket.set_reuseport(true).unwrap();
+    socket.bind("localhost:3001".parse().unwrap()).unwrap();
+
+    let listener = socket.listen(1).unwrap();
+    let (serversock,_) = listener.accept().await.unwrap();
+        
+    let cb = |req: &Request, mut response: Response|
+        {
+            println!("WS Handshake");
+            Ok(response)
+        };
+
+    let mut websocket = accept_hdr_async(serversock,cb)
+    .await.unwrap();
+
+    
+   
+
+    loop {
+        sleep(time::Duration::from_secs(3));
+        websocket.send("rock".into()).await.unwrap();
+    }
+    websocket.close(None).await.unwrap();
+}
+
 pub async fn start_taskmaster(domain_string: String, mut request_perumation_buffer: RequestandPermutation, reqs_per_thread: u32) 
 {
+
+    let ipc_future = start_ipc_server();
   
 
     let mut root_store = rustls::RootCertStore::empty();
@@ -47,10 +93,10 @@ pub async fn start_taskmaster(domain_string: String, mut request_perumation_buff
         straggler_kq_v.push(tokio::spawn(async move 
         {
             start_worker(d_s,rp , root_store_dup).await;
-
         }));
     }
     join_all(straggler_kq_v).await;
+    ipc_future.await;
 }
 
 fn configure_workload(mut vector_rp: &mut RequestandPermutation, reqs_per_thread: u32) -> Vec<RequestandPermutation>
@@ -194,21 +240,20 @@ async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutat
                {
                     HttpStatus::FullyConstructed => 
                     {
-                        dbg_log_progress("CHK-DONE: Fully constructed with body");
-
+                       
                         let fin = String::from_utf8_lossy(&b)
                             .to_string();
-                        //Python::with_gil(|py| pycb.call1(py, Vec::new().push(fin)).unwrap());
+                        
                         resume += 1;
                         continue 'out;
                     }
     
                     HttpStatus::FullyConstructedHeaderOnly =>
                     {
-                        dbg_log_progress("CHK-DONE: Fully constructed, no body");
+                        
                         let fin = String::from_utf8_lossy(&b)
                             .to_string();
-                        //Python::with_gil(|py| pycb.call1(py, Vec::new().push(fin)).unwrap());
+                        
                         resume += 1;
                         continue 'out;
                     }

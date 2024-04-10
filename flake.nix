@@ -52,9 +52,10 @@
           typescript
 	  rust-analyzer
 	  pkg-config
-	  rust-bin.stable.latest.default
+	  rust-bin.stable.latest.default	  
 	  bashInteractive
-         ];
+         ];	
+
 
          buildInputs = build_inp;
 

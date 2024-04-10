@@ -2,6 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 
+
+use futures::SinkExt;
 use interface_structs::{HttpResponseDataC, RequestandPermutation};
 use log::dbg_log_progress;
 use parse_util::parse_host_from_cache_data;
@@ -11,11 +13,15 @@ use std::num::IntErrorKind;
 use std::sync::Arc;
 
 use tauri::http::ResponseBuilder;
-use tauri::Manager;
+use tauri::{window, Manager, Window};
+
+use tokio_tungstenite::accept_hdr_async;
+use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
 
 //use crate::net_spx::*;
 use crate::parse_util::__permutate_request__;
 use crate::interface_structs::*;
+use tokio::net::TcpListener;
 
 pub mod async_net_spx;
 pub mod interface_structs;
@@ -25,11 +31,7 @@ pub mod parse_util;
 
 fn main() {
   tauri::Builder::default()
-    .register_uri_scheme_protocol("lbp", |app,
-    request|
-    {
-        tauri::http::ResponseBuilder::new().status(220).body(request.body().to_vec())
-    })
+    .invoke_handler(tauri::generate_handler![start_ipc_server])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
   }
@@ -38,6 +40,39 @@ fn main() {
 thread_local!{ static DOMAIN_BUF: Arc<RefCell<String>> = Arc::new(RefCell::new(String::new())); }
 //pub type Callback = Option< extern "C" fn(hrdc: HttpResponseDataC, permuation: String, row_num: u16) -> bool>;
 
+#[tauri::command]
+async fn start_ipc_server()
+{
+    let listener = TcpListener::bind("127.0.0.1:3001")
+    .await.unwrap();
+    
+    loop
+    {
+        let (socket,_) = listener.accept().await.unwrap();
+        tokio::spawn(async move 
+        {
+            let cb = |req: &Request, mut response: Response|
+            {
+                println!("WS Handshake");
+                Ok(response)
+            };
+    
+            let mut websocket = accept_hdr_async(socket,cb)
+            .await.unwrap();
+    
+    
+        
+            for i in 0..4
+            {
+                websocket.send(format!("{}", i).into()).await.unwrap();
+                
+                
+            }
+        
+        });
+    }
+
+}
 
 #[tauri::command]
 fn readfile_lines(dirstr: String) -> Vec<String>
@@ -48,6 +83,12 @@ fn readfile_lines(dirstr: String) -> Vec<String>
     .lines().map(|l| result.push(l.into()));
     
     return result;
+}
+
+#[tauri::command]
+fn test(window: Window) -> ()
+{
+    
 }
 
 #[tauri::command]
