@@ -3,7 +3,7 @@
 
 
 
-use futures::SinkExt;
+use futures::{SinkExt, StreamExt};
 use interface_structs::{HttpResponseDataC, RequestandPermutation};
 use log::dbg_log_progress;
 use parse_util::parse_host_from_cache_data;
@@ -21,11 +21,10 @@ use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
 //use crate::net_spx::*;
 use crate::parse_util::__permutate_request__;
 use crate::interface_structs::*;
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpSocket};
 
 pub mod async_net_spx;
 pub mod interface_structs;
-pub mod net_spx;
 pub mod log;
 pub mod parse_util;
 
@@ -43,36 +42,41 @@ thread_local!{ static DOMAIN_BUF: Arc<RefCell<String>> = Arc::new(RefCell::new(S
 #[tauri::command]
 async fn start_ipc_server()
 {
-    let listener = TcpListener::bind("127.0.0.1:3001")
-    .await.unwrap();
-    
-    loop
-    {
-        let (socket,_) = listener.accept().await.unwrap();
-        tokio::spawn(async move 
-        {
-            let cb = |req: &Request, mut response: Response|
-            {
-                println!("WS Handshake");
-                Ok(response)
-            };
-    
-            let mut websocket = accept_hdr_async(socket,cb)
-            .await.unwrap();
-    
-    
-        
-            for i in 0..4
-            {
-                websocket.send(format!("{}", i).into()).await.unwrap();
-                
-                
-            }
-        
-        });
-    }
+    let socket = TcpSocket::new_v4().unwrap();
+    socket.set_keepalive(true).unwrap();
+    socket.set_reuseaddr(true).unwrap();
+    socket.set_reuseport(true).unwrap();
+    socket.bind("127.0.0.1:3001".parse().unwrap()).unwrap();
 
+    let listener = socket.listen(1).unwrap();
+    let (serversock,_) = listener.accept().await.unwrap();
+        
+    let cb = |req: &Request, mut response: Response|
+        {
+            println!("WS Handshake");
+            Ok(response)
+        };
+
+    let websocket = accept_hdr_async(serversock,cb)
+    .await.unwrap();
+
+    let (mut tx, mut rx) = websocket.split();
+    
+
+   
+
+    loop {
+        tx.send("PING".into()).await.unwrap();
+        
+        while let Some(msg) = rx.next().await {
+            match msg.unwrap().into_text().unwrap().as_str() {
+                "PONG" => tx.send("PING".into()).await.unwrap(),
+                _ => ()
+            };
+        }
+    }
 }
+
 
 #[tauri::command]
 fn readfile_lines(dirstr: String) -> Vec<String>

@@ -2,7 +2,8 @@ use core::time;
 use std::thread::sleep;
 use std::{fs::read, sync::Arc};
 use std::io::Write;
-use futures::{StreamExt, TryStreamExt};
+use futures::channel::mpsc::unbounded;
+use futures::{future, StreamExt, TryStreamExt};
 use tauri::async_runtime;
 use tokio::net::{TcpListener, TcpSocket, TcpStream as tTcpStream};
 use futures::{future::join_all, SinkExt, TryFutureExt};
@@ -53,17 +54,24 @@ async fn start_ipc_server()
             Ok(response)
         };
 
-    let mut websocket = accept_hdr_async(serversock,cb)
+    let websocket = accept_hdr_async(serversock,cb)
     .await.unwrap();
 
+    let (mut tx, mut rx) = websocket.split();
     
+
    
 
     loop {
-        sleep(time::Duration::from_secs(3));
-        websocket.send("rock".into()).await.unwrap();
+        tx.send("PING".into()).await.unwrap();
+        
+        while let Some(msg) = rx.next().await {
+            match msg.unwrap().into_text().unwrap().as_str() {
+                "PONG" => tx.send("PING".into()).await.unwrap(),
+                _ => ()
+            };
+        }
     }
-    websocket.close(None).await.unwrap();
 }
 
 pub async fn start_taskmaster(domain_string: String, mut request_perumation_buffer: RequestandPermutation, reqs_per_thread: u32) 

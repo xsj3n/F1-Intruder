@@ -15,9 +15,17 @@ import React, { useEffect, useRef, useState } from "react";
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { HandMetal } from "lucide-react";
 
 
 // reducer needed for this component 
+
+function handle_ws_msg(data: String, ws: WebSocket)
+{
+ if (data == "PING") { ws.send("PONG")}
+ 
+ console.log(data)
+}
 
 
 export default function Home() {
@@ -76,11 +84,8 @@ export default function Home() {
   const handlestringaddinput = async function (e:  React.ChangeEvent<HTMLInputElement>)
   {
     e.preventDefault()
-    if (e.target.value == "") 
-    {
-      
-      return
-    }
+    if (e.target.value == "") { return }
+
     setPayloadsinglestr(e.target.value)
   }
 
@@ -153,7 +158,7 @@ export default function Home() {
 
   
   wsocket.addEventListener("open", e => {console.log("connected via ws!")})
-  wsocket.addEventListener("message", e => {console.log("received msg: ", e.data)})
+  wsocket.addEventListener("message", e => handle_ws_msg(e.data, wsocket))
   wsocket.addEventListener("close", e => {console.log("disconnected via ws!")})
   
   
