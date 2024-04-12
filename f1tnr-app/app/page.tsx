@@ -11,41 +11,64 @@ import { open } from '@tauri-apps/api/dialog'
 import { invoke } from '@tauri-apps/api/tauri'
 import { emit, listen } from '@tauri-apps/api/event'
 import { readTextFile, BaseDirectory } from '@tauri-apps/api/fs';
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { HandMetal } from "lucide-react";
+import { resolve } from "path";
 
 
 // reducer needed for this component 
 
-function handle_ws_msg(data: String, ws: WebSocket)
+async function sleep(seconds: any)
 {
- if (data == "PING") { ws.send("PONG")}
+  return new Promise(resolve => setTimeout(resolve, seconds * 1000))
+}
+
+async function handle_ws_msg(data: String, ws: WebSocket)
+{
+ if (data == "PING") 
+ { 
+    await sleep(10)
+    ws.send("PONG")
+  }
  
  console.log(data)
 }
 
 
+const wsocket = new WebSocket("ws://127.0.0.1:3001")
+wsocket.addEventListener("open", e => {console.log("connected via ws!")})
+wsocket.addEventListener("message", e =>  handle_ws_msg(e.data, wsocket))
+wsocket.addEventListener("close", e => {console.log("disconnected via ws!")})
+  
+
 export default function Home() {
 
   const [serverstate, setServerstate] = useState(false)
+ 
+  startIPC()
   
-  if (serverstate == false)
-  {
-    invoke("start_ipc_server")
-    setServerstate(true)
-  }
-
 
   const [initalr, setInitialr] = useState("")
   const [payloadstrs, setPayloadstrs] = useState<String[]>([])
   const [payloadopt, setPayloadOpt] = useState("Word List")
   const [payloadsignlestr, setPayloadsinglestr] = useState("")
-  const [wsocket, setWSocket] = useState(new WebSocket("ws://127.0.0.1:3001"))
-  const stringaddref = useRef<HTMLInputElement>(null)
+  //const [wsocket, setWSocket] = useState<WebSocket | null>(null)
+
   
+  
+  async function startIPC()
+  {
+     
+    if (serverstate == false)
+    {
+      invoke("start_ipc_server")
+      setServerstate(true)
+    }
+
+  }
 
   function LabeledSeparator(label: String) : React.JSX.Element
   {
@@ -130,7 +153,7 @@ export default function Home() {
         <div className="mt-4 col-span-2"><DataTable columns={string_columns} data={payloadstrs}></DataTable></div>
       </div >
         <div className="flex mt-2">
-          <Input ref={stringaddref} onChange={handlestringaddinput} type="Add payload string" placeholder="Add payload string" className="mr-2"></Input>
+          <Input  onChange={handlestringaddinput} type="Add payload string" placeholder="Add payload string" className="mr-2"></Input>
           <Button variant="outline" onClick={handlestringaddst}>Add </Button>
         </div>
       </div>
@@ -157,9 +180,6 @@ export default function Home() {
   
 
   
-  wsocket.addEventListener("open", e => {console.log("connected via ws!")})
-  wsocket.addEventListener("message", e => handle_ws_msg(e.data, wsocket))
-  wsocket.addEventListener("close", e => {console.log("disconnected via ws!")})
   
   
   return (

@@ -7,10 +7,12 @@ use futures::{SinkExt, StreamExt};
 use interface_structs::{HttpResponseDataC, RequestandPermutation};
 use log::dbg_log_progress;
 use parse_util::parse_host_from_cache_data;
+use core::time;
 use std::cell::RefCell;
 use std::fs::read_to_string;
 use std::num::IntErrorKind;
 use std::sync::Arc;
+use std::thread::sleep;
 
 use tauri::http::ResponseBuilder;
 use tauri::{window, Manager, Window};
@@ -64,8 +66,17 @@ async fn start_ipc_server()
     
 
    
-
+    let mut first_loop = true;
     loop {
+        if first_loop == false
+        {
+            sleep(time::Duration::from_secs(10));
+            
+        } else 
+        {
+            first_loop = false;
+        }
+
         tx.send("PING".into()).await.unwrap();
         
         while let Some(msg) = rx.next().await {

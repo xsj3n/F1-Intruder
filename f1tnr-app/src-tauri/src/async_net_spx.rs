@@ -37,42 +37,6 @@ async fn process(socket: TcpStream)
 }
 
 
-async fn start_ipc_server()
-{
-    let socket = TcpSocket::new_v4().unwrap();
-    socket.set_keepalive(true).unwrap();
-    socket.set_reuseaddr(true).unwrap();
-    socket.set_reuseport(true).unwrap();
-    socket.bind("localhost:3001".parse().unwrap()).unwrap();
-
-    let listener = socket.listen(1).unwrap();
-    let (serversock,_) = listener.accept().await.unwrap();
-        
-    let cb = |req: &Request, mut response: Response|
-        {
-            println!("WS Handshake");
-            Ok(response)
-        };
-
-    let websocket = accept_hdr_async(serversock,cb)
-    .await.unwrap();
-
-    let (mut tx, mut rx) = websocket.split();
-    
-
-   
-
-    loop {
-        tx.send("PING".into()).await.unwrap();
-        
-        while let Some(msg) = rx.next().await {
-            match msg.unwrap().into_text().unwrap().as_str() {
-                "PONG" => tx.send("PING".into()).await.unwrap(),
-                _ => ()
-            };
-        }
-    }
-}
 
 pub async fn start_taskmaster(domain_string: String, mut request_perumation_buffer: RequestandPermutation, reqs_per_thread: u32) 
 {
