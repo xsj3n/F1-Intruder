@@ -41,7 +41,7 @@ async fn process(socket: TcpStream)
 pub async fn start_taskmaster(domain_string: String, mut request_perumation_buffer: RequestandPermutation, reqs_per_thread: u32) 
 {
 
-    let ipc_future = start_ipc_server();
+    //let ipc_future = start_ipc_server();
   
 
     let mut root_store = rustls::RootCertStore::empty();
@@ -68,7 +68,7 @@ pub async fn start_taskmaster(domain_string: String, mut request_perumation_buff
         }));
     }
     join_all(straggler_kq_v).await;
-    ipc_future.await;
+    //ipc_future.await;
 }
 
 fn configure_workload(mut vector_rp: &mut RequestandPermutation, reqs_per_thread: u32) -> Vec<RequestandPermutation>

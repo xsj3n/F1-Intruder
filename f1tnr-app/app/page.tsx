@@ -32,9 +32,10 @@ async function handle_ws_msg(data: String, ws: WebSocket)
  { 
     await sleep(10)
     ws.send("PONG")
+    console.log("PONG")
   }
  
- console.log(data)
+
 }
 
 
@@ -57,8 +58,6 @@ export default function Home() {
   const [payloadsignlestr, setPayloadsinglestr] = useState("")
   //const [wsocket, setWSocket] = useState<WebSocket | null>(null)
 
-  
-  
   async function startIPC()
   {
      
@@ -68,8 +67,8 @@ export default function Home() {
       setServerstate(true)
     }
 
-  }
-
+  }  
+  
   function LabeledSeparator(label: String) : React.JSX.Element
   {
     return (
@@ -121,10 +120,7 @@ export default function Home() {
       let data = payloadstrs.slice(0)
       
       setPayloadstrs(data) 
-      if (stringaddref.current != null)
-      {
-        stringaddref.current.value = ""
-      }
+      
     }
 
     if (payloadsignlestr == "" || payloadsignlestr == payloadstrs.slice(-1)[0]) {return}
@@ -150,7 +146,7 @@ export default function Home() {
         <div><Button variant={"outline"} onClick={wl_open}>Load</Button></div>
         <div><Button variant={"outline"} onClick={clearpayloadstrs}>Clear</Button></div>
         <div><Button variant={"outline"}>Remove</Button></div>
-        <div className="mt-4 col-span-2"><DataTable columns={string_columns} data={payloadstrs}></DataTable></div>
+        <div className="mt-4 col-span-2"><DataTable setData={setPayloadstrs} columns={string_columns} data={payloadstrs}></DataTable></div>
       </div >
         <div className="flex mt-2">
           <Input  onChange={handlestringaddinput} type="Add payload string" placeholder="Add payload string" className="mr-2"></Input>
@@ -181,7 +177,7 @@ export default function Home() {
 
   
   
-  
+  readcache()
   return (
     <main>
       <div className="grid grid-col-2 grid-flow-col gap-4">

@@ -21,11 +21,13 @@ import React from "react"
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  setData: Function
 }
  
 export function DataTable<TData, TValue>({
   columns,
   data,
+  setData
 }: DataTableProps<TData, TValue>) {
 
   const [rowSelection, setRowSelection] = React.useState({})
@@ -37,6 +39,14 @@ export function DataTable<TData, TValue>({
     state: {
       rowSelection,
     },
+    meta: {
+      toberemoved: [""],
+      add_to_removelist: (str: String) =>
+      {
+        let new_data = data.filter((rowstrs) => rowstrs != str)
+        setData(new_data)
+      }
+    }
   })
 
 
