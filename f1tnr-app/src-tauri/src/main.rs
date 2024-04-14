@@ -78,6 +78,7 @@ async fn start_ipc_server()
         }
 
         tx.send("PING".into()).await.unwrap();
+        println!("PING");
         
         while let Some(msg) = rx.next().await {
             match msg.unwrap().into_text().unwrap().as_str() {

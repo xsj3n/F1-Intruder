@@ -5,18 +5,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data_table";
-import { string_columns } from "@/components/ui/s_columns";
+import { remove_toggled_strs_was_ran, set_remove_toggled_strs_was_ran, strs_to_be_removed, string_columns, clear_strs_to_be_removed } from "@/components/ui/s_columns";
 import { Input } from "@/components/ui/input"
 import { open } from '@tauri-apps/api/dialog'
 import { invoke } from '@tauri-apps/api/tauri'
 import { emit, listen } from '@tauri-apps/api/event'
 import { readTextFile, BaseDirectory } from '@tauri-apps/api/fs';
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { LegacyRef, useEffect, useMemo, useRef, useState } from "react";
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { HandMetal } from "lucide-react";
 import { resolve } from "path";
+import { table } from "console";
 
 
 // reducer needed for this component 
@@ -43,7 +44,7 @@ const wsocket = new WebSocket("ws://127.0.0.1:3001")
 wsocket.addEventListener("open", e => {console.log("connected via ws!")})
 wsocket.addEventListener("message", e =>  handle_ws_msg(e.data, wsocket))
 wsocket.addEventListener("close", e => {console.log("disconnected via ws!")})
-  
+
 
 export default function Home() {
 
@@ -56,7 +57,7 @@ export default function Home() {
   const [payloadstrs, setPayloadstrs] = useState<String[]>([])
   const [payloadopt, setPayloadOpt] = useState("Word List")
   const [payloadsignlestr, setPayloadsinglestr] = useState("")
-  //const [wsocket, setWSocket] = useState<WebSocket | null>(null)
+  const string_add_ref_inp = useRef<HTMLInputElement>(null)
 
   async function startIPC()
   {
@@ -109,29 +110,51 @@ export default function Home() {
     if (e.target.value == "") { return }
 
     setPayloadsinglestr(e.target.value)
+
   }
 
   const handlestringaddst = async function () {
 
     function addthenclear()
     {
-      
       payloadstrs.push(payloadsignlestr)
       let data = payloadstrs.slice(0)
       
-      setPayloadstrs(data) 
-      
+      setPayloadstrs(data)
+      if (string_add_ref_inp.current != null) {string_add_ref_inp.current.value = ""}
     }
 
     if (payloadsignlestr == "" || payloadsignlestr == payloadstrs.slice(-1)[0]) {return}
     addthenclear()
   }
 
+  string_add_ref_inp.current?.addEventListener("keypress", (e) =>
+  {
+    if (e.key != "Enter") {return}
+    e.preventDefault()
+    document.getElementById("addinput")?.click()
+  })
+
   const clearpayloadstrs = async function ()
   {
     let data: String[] = []
+    set_remove_toggled_strs_was_ran(true)
     setPayloadsinglestr("")
     setPayloadstrs(data)
+  }
+
+  const clear_selected_payload_str = async function () 
+  {
+      //let data: String[] = []
+      //let target_indexes: Number[] = []
+    
+      strs_to_be_removed.map((s): any => {
+        payloadstrs.splice(payloadstrs.findIndex((ps) => ps == s), 1)
+      })
+      let data = payloadstrs.filter((s) => true)
+      clear_strs_to_be_removed()
+      set_remove_toggled_strs_was_ran(true)
+      setPayloadstrs(data)
   }
 
   function LoadPayloadOpts()
@@ -139,19 +162,21 @@ export default function Home() {
     if (payloadopt == "wordlist")
     {
       
-      
       return (
       <div>
       <div className="grid grid-cols-3 gap-0.5">
         <div><Button variant={"outline"} onClick={wl_open}>Load</Button></div>
         <div><Button variant={"outline"} onClick={clearpayloadstrs}>Clear</Button></div>
-        <div><Button variant={"outline"}>Remove</Button></div>
+        <div><Button variant={"outline"} onClick={clear_selected_payload_str}>Remove</Button></div>
         <div className="mt-4 col-span-2"><DataTable setData={setPayloadstrs} columns={string_columns} data={payloadstrs}></DataTable></div>
       </div >
         <div className="flex mt-2">
-          <Input  onChange={handlestringaddinput} type="Add payload string" placeholder="Add payload string" className="mr-2"></Input>
-          <Button variant="outline" onClick={handlestringaddst}>Add </Button>
+          <Input ref={string_add_ref_inp} onChange={handlestringaddinput} type="Add payload string" placeholder="Add payload string" className="mr-2"></Input>
+          <Button id="addinput"  variant="outline" onClick={handlestringaddst}>Add </Button>
         </div>
+        <script>
+        
+        </script>
       </div>
       
       )
