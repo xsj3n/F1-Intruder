@@ -26,7 +26,6 @@ import { remove_toggled_strs_was_ran, set_remove_toggled_strs_was_ran } from "./
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  setData: Function
 }
 
 

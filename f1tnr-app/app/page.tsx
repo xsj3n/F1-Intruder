@@ -8,6 +8,8 @@ import { DataTable } from "@/components/ui/data_table";
 import { remove_toggled_strs_was_ran, set_remove_toggled_strs_was_ran, strs_to_be_removed, string_columns, clear_strs_to_be_removed } from "@/components/ui/s_columns";
 import { Input } from "@/components/ui/input"
 import { open } from '@tauri-apps/api/dialog'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
 import { invoke } from '@tauri-apps/api/tauri'
 import { emit, listen } from '@tauri-apps/api/event'
 import { readTextFile, BaseDirectory } from '@tauri-apps/api/fs';
@@ -15,76 +17,56 @@ import React, { LegacyRef, useEffect, useMemo, useRef, useState } from "react";
 import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { HandMetal } from "lucide-react";
+import { AlertCircle, HandMetal } from "lucide-react";
 import { resolve } from "path";
 import { table } from "console";
+import { sleep, wsocket } from "./run/page";
 
 
-// reducer needed for this component 
-
-async function sleep(seconds: any)
-{
-  return new Promise(resolve => setTimeout(resolve, seconds * 1000))
-}
-
-async function handle_ws_msg(data: String, ws: WebSocket)
-{
- if (data == "PING") 
- { 
-    await sleep(10)
-    ws.send("PONG")
-    console.log("PONG")
-  }
- 
-
-}
 
 
-const wsocket = new WebSocket("ws://127.0.0.1:3001")
-wsocket.addEventListener("open", e => {console.log("connected via ws!")})
-wsocket.addEventListener("message", e =>  handle_ws_msg(e.data, wsocket))
-wsocket.addEventListener("close", e => {console.log("disconnected via ws!")})
+
 
 
 export default function Home() {
-
-  const [serverstate, setServerstate] = useState(false)
- 
-  startIPC()
   
 
   const [initalr, setInitialr] = useState("")
   const [payloadstrs, setPayloadstrs] = useState<String[]>([])
   const [payloadopt, setPayloadOpt] = useState("Word List")
   const [payloadsignlestr, setPayloadsinglestr] = useState("")
+  
   const string_add_ref_inp = useRef<HTMLInputElement>(null)
+  const start_number_input = useRef<HTMLInputElement>(null)
+  const end_number_input = useRef<HTMLInputElement>(null)
+  const step_number_input = useRef<HTMLInputElement>(null)
+  const text_area_ref = useRef<HTMLTextAreaElement>(null)
 
-  async function startIPC()
+  const error_cache_memo: String = useMemo(() => 
   {
-     
-    if (serverstate == false)
-    {
-      invoke("start_ipc_server")
-      setServerstate(true)
-    }
 
-  }  
+    switch (payloadopt)
+    {
+      case "numbers":
+        if (start_number_input.current?.value != "" || end_number_input.current?.value  != "") {return "None"}
+        //modal_peep("Start and End fields must be filled out.")
+        return "Start and End fields must be filled out."
+
+      case "wordlist": 
+        if (payloadstrs.length != 0) {return "None"}
+        return "Add at least one string to the payload table or load strings from a line-breaked file."
+      
+        default: 
+        return "None"
+    }
+    
+  }, [payloadopt, payloadstrs, start_number_input.current?.value, end_number_input.current?.value])
   
   function LabeledSeparator(label: String) : React.JSX.Element
   {
     return (
       <><div><h2>{label}</h2></div><div className="w-1/2 mb-3 mt-1"> <Separator></Separator> </div></>
     )
-  }
-
-  const readcache = async function() 
-  {
-    const path = "/home/xis/Documents/request.txt"
-    const content = await readTextFile(path).then((s) => s)
-    console.log(content)
-    setInitialr(content)
-
-
   }
 
   const wl_open = async function()
@@ -145,10 +127,8 @@ export default function Home() {
 
   const clear_selected_payload_str = async function () 
   {
-      //let data: String[] = []
-      //let target_indexes: Number[] = []
-    
-      strs_to_be_removed.map((s): any => {
+      strs_to_be_removed.map((s): any => 
+      {
         payloadstrs.splice(payloadstrs.findIndex((ps) => ps == s), 1)
       })
       let data = payloadstrs.filter((s) => true)
@@ -168,7 +148,7 @@ export default function Home() {
         <div><Button variant={"outline"} onClick={wl_open}>Load</Button></div>
         <div><Button variant={"outline"} onClick={clearpayloadstrs}>Clear</Button></div>
         <div><Button variant={"outline"} onClick={clear_selected_payload_str}>Remove</Button></div>
-        <div className="mt-4 col-span-2"><DataTable setData={setPayloadstrs} columns={string_columns} data={payloadstrs}></DataTable></div>
+        <div className="mt-4 col-span-2"><DataTable columns={string_columns} data={payloadstrs}></DataTable></div>
       </div >
         <div className="flex mt-2">
           <Input ref={string_add_ref_inp} onChange={handlestringaddinput} type="Add payload string" placeholder="Add payload string" className="mr-2"></Input>
@@ -186,9 +166,9 @@ export default function Home() {
     {
       return (
         <div className="grid grid-rows-3 gap-4">
-          <div className=""><Input type="Start" placeholder="Start"></Input></div>
-          <div className=""><Input type="End" placeholder="End"></Input></div>
-          <div className=""><Input type="Step" placeholder="Step"></Input></div>
+          <div className=""><Input ref={start_number_input} type="Start" placeholder="Start"></Input></div>
+          <div className=""><Input ref={end_number_input} type="End" placeholder="End"></Input></div>
+          <div className=""><Input ref={step_number_input} type="Step" placeholder="Step"></Input></div>
         </div>
       )
     }
@@ -197,19 +177,89 @@ export default function Home() {
   }
 
 
+  const readcache = async function() 
+  {
+    if (initalr != "") {return}
+    const path = "/home/xis/Documents/request.txt"
+    const content = await readTextFile(path).then((s) => s)
+    console.log(content)
+    setInitialr(content)
+  }
 
-  
 
-  
-  
+
   readcache()
+
+  async function handle_run()
+  {
+    async function modal_peep(error: String)
+    {
+      const dialog: HTMLDialogElement | null = document.getElementById("notifcation_modal") as HTMLDialogElement
+      dialog?.showModal()
+      await sleep(4)
+      dialog?.close()
+    }
+
+    switch (error_cache_memo)
+    {
+      case "None":
+        permutate_strings_and_run()
+      case "Start and End fields must be filled out.":
+        modal_peep(error_cache_memo)
+      case  "Add at least one string to the payload table or load strings from a line-breaked file.":
+        modal_peep(error_cache_memo)
+      default:
+    }
+
+  }
+
+  function permutate_strings_and_run()
+  {
+    wsocket?.send(payloadstrs.join("\n"))
+    document.getElementById("run_btn")?.click()
+  }
+
+  function AlertDestructive() {
+    return (
+
+        <Alert className="" variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {error_cache_memo}
+          </AlertDescription>
+      </Alert>
+
+
+    )
+  }
+
+ function handle_cross_add(kind: number)
+ {
+    text_area_ref.current?.focus()
+    let start = text_area_ref.current?.selectionStart 
+    let end = text_area_ref.current?.selectionEnd 
+    let chars = ["†", "‡"]
+
+    if (start == undefined || end == undefined ) {return}
+
+    text_area_ref.current?.setRangeText( chars[kind], start , end)
+    return undefined
+  }
+
+
   return (
     <main>
       <div className="grid grid-col-2 grid-flow-col gap-4">
         <div className="min-h-full">
-          <Textarea defaultValue={initalr}></Textarea>
+          <Textarea ref={text_area_ref} defaultValue={initalr}></Textarea>
         </div>
         <div className="mt-3 grid-rows-2 gap-5" id="cb">
+          {LabeledSeparator("Add delimiters")}
+          <div className="flex mb-4">
+            <div className="mr-4"><Button variant="outline" onClick={() => handle_cross_add(0)}>Add †</Button></div>
+            <div className=""><Button variant="outline" onClick={() => handle_cross_add(1)}>Add ‡</Button></div>
+          </div>
           {LabeledSeparator("Payload options")}
           <div className="mb-3"> <Combobox setPayloadOpt={setPayloadOpt}></Combobox> </div>
           <div>{LoadPayloadOpts()}</div>
@@ -217,11 +267,17 @@ export default function Home() {
           <br />
           {LabeledSeparator("Threading options")}
           <div className=""><Input className="w-6/12" type="Number of requests per thread" placeholder="Number of requests per thread"></Input></div>
-         
+          <br />
+         <div className=""><Button className="w-1/2" variant={"outline"} onClick={handle_run}>Run</Button></div>
+         <dialog id="notifcation_modal">
+          {AlertDestructive()}
+          </dialog>
         </div>
       </div>
+
     </main>
   );
 }
+
 
 

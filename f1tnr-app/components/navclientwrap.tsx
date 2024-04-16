@@ -42,7 +42,7 @@ export default function navbuttonclientwrapper()
     }
     return(
     <div className="mr-4">
-        <Button variant="outline" onClick={navbuttonhandler}>{definenavbutton()}</Button>
+        <Button id="run_btn" variant="outline" onClick={navbuttonhandler}>{definenavbutton()}</Button>
         </div>
     )
 }
