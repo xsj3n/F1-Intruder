@@ -13,7 +13,7 @@ export enum CurrentPage
   run
 }
 
-export default function navbuttonclientwrapper()
+export default function Navbuttonclientwrapper({})
 {
     const router = useRouter()
     const path = usePathname()

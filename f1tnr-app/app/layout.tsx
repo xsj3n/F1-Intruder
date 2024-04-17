@@ -11,12 +11,12 @@ import { GoArrowLeft, GoArrowRight } from "react-icons/go";
 import Link from "next/link";
 import { useContext, useState } from "react";
 import { createContext } from "react";
-import navbuttonclientwrapper from "@/components/navclientwrap";
+import Navbuttonclientwrapper from "@/components/navclientwrap";
 const inter = Inter({ subsets: ["latin"] });
 
 
 
-
+export let payload_src: String[] | number[] | null = null
 
 
 export default function RootLayout({
@@ -37,7 +37,7 @@ export default function RootLayout({
       disableTransitionOnChange>
         <div className="flex justify-between mt-2 mb-2">
           <div className="ml-4"><ModeToggle></ModeToggle></div>
-          {navbuttonclientwrapper()}
+          <Navbuttonclientwrapper></Navbuttonclientwrapper>
         </div>
         
         <Separator />

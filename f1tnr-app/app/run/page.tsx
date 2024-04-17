@@ -6,10 +6,11 @@ import { Progress } from "@/components/ui/progress";
 import { http_columns } from "@/components/ui/s_columns";
 import { Textarea } from "@/components/ui/textarea";
 import { invoke } from "@tauri-apps/api/tauri";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { payload_src } from "../page";
 
 
-export let wsocket: WebSocket | null = null
+
 
 
 export async function sleep(seconds: any)
@@ -29,25 +30,29 @@ async function handle_ws_msg(data: String, ws: WebSocket | null)
 
 }
 
+invoke("start_ipc_server")
+const wsocket = new WebSocket("ws://127.0.0.1:3001")
+wsocket.addEventListener("open", e => {console.log("connected via ws!")})
+wsocket.addEventListener("message", e =>  handle_ws_msg(e.data, wsocket))
+wsocket.addEventListener("close", e => {console.log("disconnected via ws!")})
 
-
-
-export default function run()
+export default function Run()
 {
 
-    const is_ipc_server_up = useMemo(() => {
-    
-        
-        if (wsocket !=  null) {return true} 
-        invoke("start_ipc_server")
-        wsocket = new WebSocket("ws://127.0.0.1:3001")
-        wsocket.addEventListener("open", e => {console.log("connected via ws!")})
-        wsocket.addEventListener("message", e =>  handle_ws_msg(e.data, wsocket))
-        wsocket.addEventListener("close", e => {console.log("disconnected via ws!")})
-        return true 
-    }, [wsocket])
+    useEffect(() => 
+    {
+        if (payload_src == null) {console.log("payload src null");return}
 
-
+        if ( typeof payload_src[1] !=  "number")
+        {
+            console.log("PERMUTATE-S†" + payload_src.join("†"))
+            wsocket.send("PERMUTATE-S†" + payload_src.join("†"))  
+        }
+        let num_payload_indicators = "PERMUTATE-N†"
+        payload_src.map((n) => num_payload_indicators = num_payload_indicators + n.toString() + "†")
+        console.log("Indicators being sent: ", num_payload_indicators)
+        wsocket.send(num_payload_indicators)    
+    }, [])
 
     return(
         <div className="grid grid-rows-1">

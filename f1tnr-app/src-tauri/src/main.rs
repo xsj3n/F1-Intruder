@@ -83,8 +83,26 @@ async fn start_ipc_server()
         while let Some(msg) = rx.next().await {
             match msg.unwrap().into_text().unwrap().as_str() {
                 "PONG" => tx.send("PING".into()).await.unwrap(),
-                
-                _ => ()
+                s => 
+                {
+                    println!("IPC home received: {}", s);
+                    let mut parts: Vec<&str> = s.split("†").collect();
+                    if s.starts_with("PERMUTATE-S†")
+                    {
+                        println!("String Parts: {:#?}", parts);
+                        parts.remove(0);
+                    }
+                    let part_collection: Vec<i32> = parts.iter().map(|num_string| 
+                        {
+                            match num_string.parse::<i32>()
+                            {
+                                Ok(n) => n,
+                                Err(_) => -1
+                            }
+                        }).filter(|number| *number != -1).collect();
+                    println!("Number Indicator Parts: {:#?}", part_collection);
+                    parts.remove(0);
+                }
             };
         }
     }

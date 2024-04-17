@@ -25,7 +25,7 @@ import { sleep, wsocket } from "./run/page";
 
 
 
-
+export let payload_src: String[] | number[] | null = null
 
 
 export default function Home() {
@@ -49,15 +49,17 @@ export default function Home() {
     {
       case "numbers":
         if (start_number_input.current?.value != "" || end_number_input.current?.value  != "") {return "None"}
-        //modal_peep("Start and End fields must be filled out.")
+        console.error("Number fields not filled")
         return "Start and End fields must be filled out."
 
       case "wordlist": 
         if (payloadstrs.length != 0) {return "None"}
+        console.error("Payload strings are empty")
         return "Add at least one string to the payload table or load strings from a line-breaked file."
       
-        default: 
+        default:
         return "None"
+        
     }
     
   }, [payloadopt, payloadstrs, start_number_input.current?.value, end_number_input.current?.value])
@@ -81,7 +83,7 @@ export default function Home() {
     let data: String[] = (await contents).split("\n")
     data = data.filter((s) => s.trim() != "")
 
-    if (data.length > 500) { return }
+   
     await setPayloadstrs(data)
 
   }
@@ -120,6 +122,7 @@ export default function Home() {
   const clearpayloadstrs = async function ()
   {
     let data: String[] = []
+    payload_src = null
     set_remove_toggled_strs_was_ran(true)
     setPayloadsinglestr("")
     setPayloadstrs(data)
@@ -134,6 +137,7 @@ export default function Home() {
       let data = payloadstrs.filter((s) => true)
       clear_strs_to_be_removed()
       set_remove_toggled_strs_was_ran(true)
+      payload_src = payloadstrs
       setPayloadstrs(data)
   }
 
@@ -141,7 +145,7 @@ export default function Home() {
   {
     if (payloadopt == "wordlist")
     {
-      
+      payload_src = payloadstrs
       return (
       <div>
       <div className="grid grid-cols-3 gap-0.5">
@@ -200,24 +204,46 @@ export default function Home() {
       dialog?.close()
     }
 
+    async function turn_nums_to_num_array()
+    {
+      let start = Number(start_number_input.current?.value)
+      let end = Number(end_number_input.current?.value)
+      let step = Number(step_number_input.current?.value)
+
+      if (isNaN(start) || isNaN(end)) 
+      { 
+        modal_peep("Number fields must be populated with numbers")
+        return
+      }
+
+      let num_payload_indicators = []
+
+      if (!isNaN(step)) { num_payload_indicators.push(step)}
+      num_payload_indicators.push(end)
+      num_payload_indicators.push(start)
+      payload_src = num_payload_indicators
+
+      return 
+    }
+
     switch (error_cache_memo)
     {
       case "None":
-        permutate_strings_and_run()
+        if (payloadopt == "wordlist") 
+        {
+          payload_src = payloadstrs
+        } else {turn_nums_to_num_array()}
+        document.getElementById("run_btn")?.click()
       case "Start and End fields must be filled out.":
         modal_peep(error_cache_memo)
+
       case  "Add at least one string to the payload table or load strings from a line-breaked file.":
         modal_peep(error_cache_memo)
-      default:
     }
 
   }
 
-  function permutate_strings_and_run()
-  {
-    wsocket?.send(payloadstrs.join("\n"))
-    document.getElementById("run_btn")?.click()
-  }
+
 
   function AlertDestructive() {
     return (
