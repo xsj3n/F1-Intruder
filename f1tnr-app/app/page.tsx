@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data_table";
-import { remove_toggled_strs_was_ran, set_remove_toggled_strs_was_ran, strs_to_be_removed, string_columns, clear_strs_to_be_removed } from "@/components/ui/s_columns";
+import { remove_toggled_strs_was_ran, set_remove_toggled_strs_was_ran, strs_to_be_removed, string_columns, clear_strs_to_be_removed, table_inst } from "@/components/ui/s_columns";
 import { Input } from "@/components/ui/input"
 import { open } from '@tauri-apps/api/dialog'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -18,9 +18,8 @@ import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, HandMetal } from "lucide-react";
-import { resolve } from "path";
-import { table } from "console";
-import { sleep, wsocket } from "./run/page";
+import { sleep} from "./run/page";
+import { GoArrowLeft, GoArrowRight } from "react-icons/go";
 
 
 
@@ -41,6 +40,24 @@ export default function Home() {
   const end_number_input = useRef<HTMLInputElement>(null)
   const step_number_input = useRef<HTMLInputElement>(null)
   const text_area_ref = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => 
+  { 
+    if (!payloadstrs) {return}
+    if (payloadstrs.length > 100)
+    {
+      payload_src = payloadstrs
+      payloadstrs.splice(99)
+      return
+    } else if (payload_src)
+    {
+      setPayloadstrs(payload_src as String[])
+    }
+
+    
+
+  }, [payloadstrs])
+
 
   const error_cache_memo: String = useMemo(() => 
   {
@@ -145,7 +162,7 @@ export default function Home() {
   {
     if (payloadopt == "wordlist")
     {
-      payload_src = payloadstrs
+      
       return (
       <div>
       <div className="grid grid-cols-3 gap-0.5">
@@ -156,7 +173,15 @@ export default function Home() {
       </div >
         <div className="flex mt-2">
           <Input ref={string_add_ref_inp} onChange={handlestringaddinput} type="Add payload string" placeholder="Add payload string" className="mr-2"></Input>
-          <Button id="addinput"  variant="outline" onClick={handlestringaddst}>Add </Button>
+          
+          <Button id="addinput"  variant="outline" onClick={handlestringaddst} className="mr-1">Add</Button>
+          <Button variant="outline" onClick={() => table_inst?.previousPage()}  className="mr-1">
+            <GoArrowLeft></GoArrowLeft>
+            </Button>
+            <Button variant="outline" onClick={() => table_inst?.nextPage()} >
+              <GoArrowRight></GoArrowRight>
+            </Button>
+          
         </div>
         <script>
         
@@ -234,6 +259,7 @@ export default function Home() {
           payload_src = payloadstrs
         } else {turn_nums_to_num_array()}
         document.getElementById("run_btn")?.click()
+
       case "Start and End fields must be filled out.":
         modal_peep(error_cache_memo)
 

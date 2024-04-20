@@ -44,6 +44,7 @@ export function DataTable<TData, TValue>({
     columns,
     getCoreRowModel: getCoreRowModel(),
     onRowSelectionChange: setRowSelection,
+    getPaginationRowModel: getPaginationRowModel(),
     state: {
       rowSelection,
     },
@@ -59,7 +60,7 @@ export function DataTable<TData, TValue>({
   return (
     <>
 
-    <div className="rounded-md border">
+    <div className="rounded-md border w-72">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -103,6 +104,7 @@ export function DataTable<TData, TValue>({
         </TableBody>
       </Table>
     </div>
+    
     </>
   )
 }

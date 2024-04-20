@@ -1,12 +1,13 @@
 "use client"
 
 import { Checkbox } from "@radix-ui/react-checkbox"
-import { ColumnDef, Row } from "@tanstack/react-table"
+import { ColumnDef, Row, Table } from "@tanstack/react-table"
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
-import { GoDash } from "react-icons/go"
+import { GoArrowLeft, GoArrowRight, GoDash } from "react-icons/go"
 import { table } from "console"
 
 import { ChangeEventHandler, useMemo } from "react"
+import { Button } from "./button"
 
 
 
@@ -59,13 +60,19 @@ function handle_table_selection(row: Row<String>, value: any)
   
 }
 
+export let table_inst: Table<String> | null
+
 export const string_columns: ColumnDef<String>[] = [
   {
 
       id: "select",
-      header: ({ table }) => (
-        <></>
-      ),
+      header: ({ table }) => 
+      {
+        table_inst = table
+        return (
+          <></>
+        )
+      },
       cell: ({ row }) => 
       (
         <div className="inline-flex items-center">
@@ -102,7 +109,7 @@ export const string_columns: ColumnDef<String>[] = [
       cell: ({row}) => 
       {
           let r = row.original
-          return (<>{r}</>)
+          return (<p className="">{r}</p>)
       }
   },
 ]
