@@ -1,0 +1,336 @@
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: lR
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:22 GMT
+Content-Type: application/json
+Content-Length: 220
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "lR", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ede-0a7f868c7c70e32129247772"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: lr
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:22 GMT
+Content-Type: application/json
+Content-Length: 220
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "lr", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ede-73ab68120f58148e32b69a91"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: Lr
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:22 GMT
+Content-Type: application/json
+Content-Length: 220
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "Lr", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ede-4c23fc1a01739e871df92c3c"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: LR
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:22 GMT
+Content-Type: application/json
+Content-Length: 220
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "LR", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ede-3a61ce9f54f58dc43c2dda63"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: lr0ck
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:22 GMT
+Content-Type: application/json
+Content-Length: 223
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "lr0ck", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ede-37a98b922732e05576fd11fd"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: Lr0ck
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:22 GMT
+Content-Type: application/json
+Content-Length: 223
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "Lr0ck", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ede-626437cd6009241c3e37203d"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: LR0ck
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:22 GMT
+Content-Type: application/json
+Content-Length: 223
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "LR0ck", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ede-45e34c3365a321840c05730a"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: lrock
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:23 GMT
+Content-Type: application/json
+Content-Length: 223
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "lrock", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ede-53fda4cd748651125cf2a15f"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: Lrock
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:24 GMT
+Content-Type: application/json
+Content-Length: 223
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "Lrock", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0edf-2531481a526327267ac36f15"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: LRock
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:24 GMT
+Content-Type: application/json
+Content-Length: 223
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "LRock", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ee0-2da3a2d44751b65a421b2636"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: !0br
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:24 GMT
+Content-Type: application/json
+Content-Length: 222
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "!0br", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ee0-43df0fb70487b48c041f5167"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
+=R
+GET /get HTTP/1.1
+Host: httpbin.org
+Cookie: !0bR
+Connection: keep-alive
+
+=RR
+HTTP/1.1 200 OK
+Date: Wed, 08 May 2024 05:34:24 GMT
+Content-Type: application/json
+Content-Length: 222
+Connection: keep-alive
+Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Cookie": "!0bR", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-663b0ee0-0391384f18b250d47a628c18"
+  }, 
+  "origin": "72.212.51.226", 
+  "url": "https://httpbin.org/get"
+}
+
+
