@@ -6,11 +6,3 @@ import { DataTable } from "./ui/data_table"
 
  
 
-export default function HttpTable()
-{
-    const [httpdata, setHttpdata] = useState<HttpData[]>([])
-
-    return(
-        <DataTable columns={http_columns} data={httpdata} ></DataTable>
-    )
-}

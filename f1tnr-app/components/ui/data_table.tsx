@@ -26,6 +26,7 @@ import { remove_toggled_strs_was_ran, set_remove_toggled_strs_was_ran } from "./
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  cn: String
 }
 
 
@@ -33,6 +34,7 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
+  cn
 }: DataTableProps<TData, TValue>) {
 
   columns = useMemo(() => columns as ColumnDef<TData>[],[])
@@ -60,7 +62,7 @@ export function DataTable<TData, TValue>({
   return (
     <>
 
-    <div className="rounded-md border w-72">
+    <div className={"rounded-md border " + cn}>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (

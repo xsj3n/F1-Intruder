@@ -25,7 +25,8 @@ import { GoArrowLeft, GoArrowRight } from "react-icons/go";
 
 
 export let payload_src: String[] | number[] | null = null
-
+export let file_path: String | null = null
+export let http_request: String | null = null
 
 export default function Home() {
   
@@ -93,6 +94,7 @@ export default function Home() {
     const selected = await open({});
 
     if (Array.isArray(selected) || selected == null) { return }
+    file_path = selected
 
     const contents = readTextFile(selected)
 
@@ -165,11 +167,11 @@ export default function Home() {
       
       return (
       <div>
-      <div className="grid grid-cols-3 gap-0.5">
-        <div><Button variant={"outline"} onClick={wl_open}>Load</Button></div>
+      <div className="grid grid-cols-3">
+        <div className="w-1/2"><Button variant={"outline"} onClick={wl_open}>Load</Button></div>
         <div><Button variant={"outline"} onClick={clearpayloadstrs}>Clear</Button></div>
         <div><Button variant={"outline"} onClick={clear_selected_payload_str}>Remove</Button></div>
-        <div className="mt-4 col-span-2"><DataTable columns={string_columns} data={payloadstrs}></DataTable></div>
+        <div className="mt-4 col-span-2"><DataTable columns={string_columns} data={payloadstrs} cn={"w-72"}></DataTable></div>
       </div >
         <div className="flex mt-2">
           <Input ref={string_add_ref_inp} onChange={handlestringaddinput} type="Add payload string" placeholder="Add payload string" className="mr-2"></Input>
@@ -181,11 +183,7 @@ export default function Home() {
             <Button variant="outline" onClick={() => table_inst?.nextPage()} >
               <GoArrowRight></GoArrowRight>
             </Button>
-          
         </div>
-        <script>
-        
-        </script>
       </div>
       
       )
@@ -215,14 +213,12 @@ export default function Home() {
     setInitialr(content)
   }
 
-
-
-  readcache()
-
   async function handle_run()
   {
     async function modal_peep(error: String)
     {
+      if (error_cache_memo == "None") {return}
+
       const dialog: HTMLDialogElement | null = document.getElementById("notifcation_modal") as HTMLDialogElement
       dialog?.showModal()
       await sleep(4)
@@ -243,9 +239,10 @@ export default function Home() {
 
       let num_payload_indicators = []
 
-      if (!isNaN(step)) { num_payload_indicators.push(step)}
-      num_payload_indicators.push(end)
       num_payload_indicators.push(start)
+      num_payload_indicators.push(end)
+      if (!isNaN(step)) { num_payload_indicators.push(step)}
+
       payload_src = num_payload_indicators
 
       return 
@@ -257,7 +254,12 @@ export default function Home() {
         if (payloadopt == "wordlist") 
         {
           payload_src = payloadstrs
-        } else {turn_nums_to_num_array()}
+        } else 
+        {
+          turn_nums_to_num_array()
+        }
+
+        http_request = text_area_ref.current?.value as string //src: trust me bro
         document.getElementById("run_btn")?.click()
 
       case "Start and End fields must be filled out.":
@@ -268,8 +270,6 @@ export default function Home() {
     }
 
   }
-
-
 
   function AlertDestructive() {
     return (
@@ -299,8 +299,10 @@ export default function Home() {
     return undefined
   }
 
+  readcache()
 
   return (
+
     <main>
       <div className="grid grid-col-2 grid-flow-col gap-4">
         <div className="min-h-full">
@@ -313,8 +315,12 @@ export default function Home() {
             <div className=""><Button variant="outline" onClick={() => handle_cross_add(1)}>Add ‡</Button></div>
           </div>
           {LabeledSeparator("Payload options")}
-          <div className="mb-3"> <Combobox setPayloadOpt={setPayloadOpt}></Combobox> </div>
-          <div>{LoadPayloadOpts()}</div>
+          <div className="mb-3">
+             <Combobox setPayloadOpt={setPayloadOpt}></Combobox>
+          </div>
+          <div>
+            {LoadPayloadOpts()}
+          </div>
           <div></div>
           <br />
           {LabeledSeparator("Threading options")}

@@ -14,21 +14,50 @@ import { Button } from "./button"
 export type HttpData = {
     payload: String,
     status_code: Number,
+    status_string: String,
     length: Number
 }
 
+export let http_table_inst: Table<HttpData> | null = null
 export const http_columns: ColumnDef<HttpData>[] = [
+    {
+      id: "head",
+      header: ({table}) =>
+      {
+        http_table_inst = table
+      }
+    },
     {
         accessorKey: "payload",
         header: "Payload",
+        cell: ({row}) =>
+        {
+        return (<>{row.original.payload}</>)
+        }
     },
     {
         accessorKey: "status_code",
         header: "Status Code",
+        cell: ({row}) =>
+        {
+          return (<>{row.original.status_code}</>)
+        }
+    },
+    {
+      accessorKey: "status_string",
+      header: "Status String",
+      cell: ({row}) =>
+      {
+        return (<>{row.original.status_string}</>)
+      }
     },
     {
         accessorKey: "length",
-        header: "Length"
+        header: "Length",
+        cell: ({row}) =>
+        {
+          return (<>{row.original.length}</>)
+        }
     }
 ]
 export let strs_to_be_removed: String[]  = []
