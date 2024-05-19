@@ -1,29 +1,13 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-use std::borrow::BorrowMut;
-use std::fs::{self, read_dir, ReadDir};
-use std::io::{self, Seek};
-use std::os::unix::process::CommandExt;
-use std::vec;
-
 use serde::Serialize;
-use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
-
 use std::sync::mpsc::{Receiver, Sender};
-use tokio::sync::{Mutex, MutexGuard};
-use std::{fs::read_to_string, path::PathBuf};
-use std::path::Path;
+use tokio::sync::Mutex;
+use std::path::PathBuf;
 use std::process::Command;
-
-
-
 use futures::StreamExt;
-use notify::event::{DataChange, ModifyKind};
-use notify::{event, Config, Event, EventKind, RecommendedWatcher, Watcher};
-use tauri::api::file::{self, Move};
-use tauri::{Manager, State, Window};
+use tauri::{Manager, State};
 
 #[derive(Clone, Serialize, Debug)]
 struct HttpData
@@ -78,10 +62,7 @@ impl HttpResponse
     }
 }
 
-struct EventEmitterPipe
-{
-    tx: Mutex<Sender<HttpData>>
-}
+
 
 struct DataFileMemoBuffer
 {
@@ -183,17 +164,13 @@ fn main()
 #[tauri::command]
 fn start_async_engine(http_request: String, permutation_filepath: String)
 {
-    let out_t = Command::new("pwd").output().unwrap();
-    //println!("parent process pwd: {}", String::from_utf8_lossy(&out_t.stdout));
-
-    let output: std::process::Child = Command::new("../../async_net_engine/AsyncNetEngine/target/debug/AsyncNetEngine")
+    let _: std::process::Child = Command::new("../../async_net_engine/AsyncNetEngine/target/debug/AsyncNetEngine")
     .arg(http_request)
     .arg(permutation_filepath)
     .spawn().unwrap();
 
     return
-    //println!("{}", String::from_utf8_lossy(&output.stderr));
-    //println!("{}", String::from_utf8_lossy(&output.stdout));
+
 }
 
 #[tauri::command]
