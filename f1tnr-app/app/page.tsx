@@ -48,7 +48,12 @@ export default function Home() {
   {
     console.log("Unlocking...")
     invoke("unlock_net_engine", {}).then(() => {})
+    if (text_area_ref.current != null)
+    {
+      text_area_ref.current.value = invoke("parse_burp_file", {}).then(s => s) as unknown as string
+    }
     
+
   }, [])
 
 
@@ -197,14 +202,6 @@ export default function Home() {
   }
 
 
-  const readcache = async function() 
-  {
-    if (initalr != "") {return}
-    const path = "/home/xis/Documents/request.txt"
-    const content = await readTextFile(path).then((s) => s)
-    console.log(content)
-    setInitialr(content)
-  }
 
   async function handle_run()
   {
@@ -298,7 +295,7 @@ export default function Home() {
     return undefined
   }
 
-  readcache()
+
   
   return (
 

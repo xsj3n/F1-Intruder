@@ -117,6 +117,7 @@ fn main()
         start_async_engine,
         check_for_new_http_data,
         refresh_datadir_cache,
+        parse_burp_file,
         unlock_net_engine])
     .setup(|app|
     {
@@ -158,6 +159,32 @@ fn main()
     })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn parse_burp_file() -> String
+{
+    match std::fs::read_to_string("/tmp/request.data")
+    {
+      Ok(s) => 
+      {
+        let mut r = s.lines()
+        .filter(|line| line.contains("Host: "))
+        .next().unwrap().split("Host: ");
+
+        _ = r.next();
+        
+        return r.next().unwrap()
+        .trim().into()
+
+      }, 
+      Err(_) => 
+      {
+        return String::new();
+      },
+    };
+
+
 }
 
 

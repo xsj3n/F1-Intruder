@@ -32,6 +32,7 @@
         dbus
         openssl_3
         glib
+	jython
         gtk3
         libsoup
         webkitgtk
@@ -48,6 +49,7 @@
       {
         packages =  with pkgs; [
 	  bashInteractive
+	  burpsuite
 	  nodePackages_latest.nodejs
 	  typescript
           rust-analyzer

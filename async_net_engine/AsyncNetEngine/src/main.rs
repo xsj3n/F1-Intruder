@@ -11,11 +11,7 @@ pub mod interface_structs;
 pub mod parse_util;
 pub mod log;
 
-/*
-This binary is intended to be triggered by react's useEffect hook, and as a consequence, it needs 
-to be fault tolerant to being triggred multiple times, so fine. We'll have a lock system based on 
 
-*/
 
 #[tokio::main]
 async fn main() // params will be the orginal request, and the permutations
@@ -48,20 +44,17 @@ async fn main() // params will be the orginal request, and the permutations
 
     if &args[2] == "--cli"
     {
-        todo!()//signal that paths will be different 
+        todo!() //signal that paths will be different 
     }
-
+    
+    let request_s_2 = request.clone();
     let rp = synth_request_groups(request, permutations);
     let rp_v = configure_workload(rp, 12);
     
     spawn_blocking(move || async
     {
-        async_net_spx::start_taskmaster("httpbin.org".to_string(), rp_v).await;
+        async_net_spx::start_taskmaster(parse_util::parse_hostname(request_s_2), rp_v).await;
     }).await.unwrap().await;
-
-    
-    
-    //_ = unlock(pwd);
 
     return 
 }

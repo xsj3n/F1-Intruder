@@ -52,71 +52,14 @@ pub fn parse_uri(full_uri: String) -> URICOMPONENTS
 
 }
 */
-
-pub fn parse_host_from_cache_data(request_string: &str) -> Result<String, CacheReadError>
+pub fn parse_hostname(request: String) -> String
 {
-    let mut host = String::new();
-    let lines = request_string.split("\r\n");
-    
-    for line in lines 
-    {
-        if line.contains("Host:")
-        {
-            host = line.replace("Host: ", "")
-            .replace("\r\n", "");
-        
-        }
-    }
+    let mut request_lines = request.lines().filter(|l| l.contains("Host: ") );
+    _ = request_lines.next();
+    return request_lines.next().unwrap().to_string();
 
-    let log_s = "[+] Host parsed: ".to_string() + &host;
-
-    log_f(log_s, LogType::Meta, std::sync::Arc::new(get_pwd()));
-
-    if host.is_empty() == true { return Err(CacheReadError::new("[!] Unable to parse host from the request in request cache")); }
-    return Ok(host);
 }
 
-
-pub fn parse_burp_file() -> String
-{
-    log_f("[+] parse_burp_file started", LogType::Meta, std::sync::Arc::new(get_pwd()));
-    let req_byte_string = match std::fs::read_to_string("/Users/xis31/tmp/req_cache.dat")
-    {
-      Ok(s) => s, 
-      Err(_) => 
-      {
-        log_f("[!] Unable to read cache file", LogType::Meta, std::sync::Arc::new(get_pwd()));
-        return String::new();
-      },
-    };
-
-    let req_byte_string_iterator = req_byte_string.split("\n");
-    let mut bytes: Vec<u8> = Vec::new();
-
-    for strings in req_byte_string_iterator
-    {
-        match strings.parse::<u8>()  
-        {
-            Ok(i) => bytes.push(i),
-            Err(e) => 
-            {
-                if e.kind() == &IntErrorKind::Empty 
-                {
-                    println!("[+] Reached end of Burp Suite request cache");
-                }
-            }
-        };
-    }
-    
-
-    let parsed_string = String::from_utf8_lossy(&bytes)
-        .to_string();
-
-    println!("[+] Request parsed from BurpSuite request cache:");
-    print!("{}", parsed_string);
-    return parsed_string;
-
-}
 
 fn permutate_request(perm_src: &str, perm_mod: &str) -> Option<String>
 {
