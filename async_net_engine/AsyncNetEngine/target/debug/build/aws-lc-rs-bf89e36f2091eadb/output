@@ -1,3 +1,0 @@
-cargo:include=/home/xis/src/f1dev/async_net_engine/AsyncNetEngine/target/debug/build/aws-lc-sys-089161cbff996ae0/out/include
-cargo:libcrypto=aws_lc_0_16_0_crypto
-cargo:root=/home/xis/src/f1dev/async_net_engine/AsyncNetEngine/target/debug/build/aws-lc-sys-089161cbff996ae0/out
