@@ -12,10 +12,13 @@ import { Button } from "./button"
 
 
 export type HttpData = {
+    id: Number,
     payload: String,
     status_code: Number,
     status_string: String,
-    length: Number
+    length: Number,
+    request: String,
+    response: String
 }
 
 export let http_table_inst: Table<HttpData> | null = null
@@ -28,11 +31,19 @@ export const http_columns: ColumnDef<HttpData>[] = [
       }
     },
     {
+      accessorKey: "r_id",
+      header: "Request ID",
+      cell: ({row}) =>
+        {
+          return (<p>{row.original.id.toString()}</p>)
+        }
+    },
+    {
         accessorKey: "payload",
         header: "Payload",
         cell: ({row}) =>
         {
-        return (<>{row.original.payload}</>)
+          return (<p>{row.original.payload}</p>)
         }
     },
     {
@@ -40,7 +51,7 @@ export const http_columns: ColumnDef<HttpData>[] = [
         header: "Status Code",
         cell: ({row}) =>
         {
-          return (<>{row.original.status_code}</>)
+          return (<p>{row.original.status_code.toString()}</p>)
         }
     },
     {
@@ -48,7 +59,7 @@ export const http_columns: ColumnDef<HttpData>[] = [
       header: "Status String",
       cell: ({row}) =>
       {
-        return (<>{row.original.status_string}</>)
+        return (<p>{row.original.status_string.toString()}</p>)
       }
     },
     {
@@ -56,7 +67,7 @@ export const http_columns: ColumnDef<HttpData>[] = [
         header: "Length",
         cell: ({row}) =>
         {
-          return (<>{row.original.length}</>)
+          return (<p>{row.original.length.toString()}</p>)
         }
     }
 ]

@@ -5,6 +5,7 @@ import { Button } from "./ui/button"
 import { GoArrowLeft, GoArrowRight } from "react-icons/go"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { invoke } from "@tauri-apps/api/tauri"
 
 
 
@@ -28,6 +29,7 @@ export default function Navbuttonclientwrapper({})
 
         }
         
+        invoke("unlock_net_engine", {}).then(() => {})
         router.push("/")
         return
     }

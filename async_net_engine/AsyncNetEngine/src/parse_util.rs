@@ -1,6 +1,8 @@
 use std::io::{BufRead, BufReader};
 use std::{io, num::IntErrorKind};
 use std::fs::File;
+use crate::get_pwd;
+use crate::interface_structs::HttpRequest;
 use crate::{interface_structs::RequestandPermutation, log::{log_f, LogType}};
 
 #[derive(Debug)]
@@ -67,7 +69,8 @@ pub fn parse_host_from_cache_data(request_string: &str) -> Result<String, CacheR
     }
 
     let log_s = "[+] Host parsed: ".to_string() + &host;
-    log_f(log_s, LogType::Meta);
+
+    log_f(log_s, LogType::Meta, std::sync::Arc::new(get_pwd()));
 
     if host.is_empty() == true { return Err(CacheReadError::new("[!] Unable to parse host from the request in request cache")); }
     return Ok(host);
@@ -76,13 +79,13 @@ pub fn parse_host_from_cache_data(request_string: &str) -> Result<String, CacheR
 
 pub fn parse_burp_file() -> String
 {
-    log_f("[+] parse_burp_file started", LogType::Meta);
+    log_f("[+] parse_burp_file started", LogType::Meta, std::sync::Arc::new(get_pwd()));
     let req_byte_string = match std::fs::read_to_string("/Users/xis31/tmp/req_cache.dat")
     {
       Ok(s) => s, 
       Err(_) => 
       {
-        log_f("[!] Unable to read cache file", LogType::Meta);
+        log_f("[!] Unable to read cache file", LogType::Meta, std::sync::Arc::new(get_pwd()));
         return String::new();
       },
     };
@@ -131,12 +134,20 @@ fn permutate_request(perm_src: &str, perm_mod: &str) -> Option<String>
 pub fn synth_request_groups(http_request: String, permuations_v: Vec<String>) -> RequestandPermutation
 {
     let mut rp: RequestandPermutation = RequestandPermutation::new();
+    let permutation_v_len = permuations_v.len();
 
+    let mut id_c: usize = 0;
     for permutation in permuations_v
     {
-        rp.request.push(permutate_request(&http_request, &permutation).unwrap());
+        let http_request = HttpRequest::new(permutate_request(&http_request, &permutation).unwrap(), id_c as u32);
+        rp.request.push(http_request);
         rp.permutation.push(permutation);
+        id_c += 1;
     };
+
+    assert!(permutation_v_len == id_c,
+         "More IDs then there are requests. ID count: {}, Permutation count: {}",
+          id_c, permutation_v_len); 
 
     return rp;
 }

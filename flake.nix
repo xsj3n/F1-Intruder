@@ -40,7 +40,6 @@
 	llvmPackages_17.libcxxClang
 	perl
 	go
-
       ];
       
       pkgs = import nixpkgs { inherit system overlays; } ;
@@ -48,12 +47,12 @@
       in pkgs.mkShell 
       {
         packages =  with pkgs; [
-	  nodejs_21
-          typescript
-	  rust-analyzer
-	  pkg-config
-	  rust-bin.stable.latest.default	  
 	  bashInteractive
+	  nodePackages_latest.nodejs
+	  typescript
+          rust-analyzer
+          pkg-config
+          rust-bin.stable.latest.default	  
          ];	
 
 

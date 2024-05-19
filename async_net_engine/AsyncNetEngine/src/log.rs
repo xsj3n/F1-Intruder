@@ -1,5 +1,7 @@
-use std::io::Write;
+use std::{fs::File, io::Write, sync::Arc};
 use chrono::prelude::*;
+
+use crate::Pwd;
 
 pub enum LogType
 {
@@ -7,7 +9,7 @@ pub enum LogType
     DataFile(u32)
 }
 
-pub fn log_f<S: AsRef<str>>(msg: S, log_type: LogType) -> ()
+pub fn log_f<S: AsRef<str>>(msg: S, log_type: LogType, pwd: std::sync::Arc<Pwd>) -> ()
 {
     let time: String = Local::now().to_string() + " ";
 
@@ -18,13 +20,9 @@ pub fn log_f<S: AsRef<str>>(msg: S, log_type: LogType) -> ()
             let mut final_str_to_log = time + msg.as_ref();
             final_str_to_log.push_str("\n");
 
-            let opts = std::fs::OpenOptions::new()
-            .read(false).write(true).create(true).append(true).open("../test.log");
-
-            if opts.is_err() {return ();}
-
+            let mut file = open_log_file(pwd, 0, true);
             
-            match writeln!(&mut opts.unwrap(), "{}", final_str_to_log) 
+            match writeln!(&mut file, "{}", final_str_to_log) 
             {
                 Ok(_) =>  return  (),
                 Err(_) => return ()
@@ -33,17 +31,9 @@ pub fn log_f<S: AsRef<str>>(msg: S, log_type: LogType) -> ()
         },
         LogType::DataFile(id) =>
         {
-            let mut final_str_to_log = msg.as_ref().to_string();
-            final_str_to_log.push_str("\n");
+            let mut file = open_log_file(pwd, id, false);
 
-            let filepath = form_filepath_from_id(id);
-
-            let opts = std::fs::OpenOptions::new()
-            .read(false).write(true).create(true).append(true).open(filepath);
-
-            if opts.is_err() {return ();}
-
-            match writeln!(&mut opts.unwrap(), "{}", final_str_to_log) 
+            match writeln!(&mut file, "{}", msg.as_ref()) 
             {
                 Ok(_) =>  return  (),
                 Err(_) => return ()
@@ -59,11 +49,44 @@ pub fn log_f<S: AsRef<str>>(msg: S, log_type: LogType) -> ()
 
 }
 
-fn form_filepath_from_id(id: u32) -> String
+fn form_filepath_from_id(mut path_prefix: String, id: u32) -> String
 {
-    let mut filepath = "../".to_string();
-    filepath.push_str(id.to_string().as_ref());
-    filepath.push_str(".data");
+    let id_s: String = id.to_string();
 
-    return filepath;
+    path_prefix.push_str("data/");
+    if id == 0 {path_prefix.push_str("S")}
+
+    path_prefix.push_str(&id_s);
+    path_prefix.push_str(".data");
+
+    return path_prefix;
+}
+
+fn open_log_file(pwd: Arc<Pwd>, id: u32, meta: bool) -> File
+{
+    if meta == true
+    {
+        match *pwd
+        {
+            Pwd::Gui => return std::fs::OpenOptions::new()
+            .read(false).write(true).create(true).append(true)
+            .open("../../async_net_engine/test.log").unwrap(),
+
+            Pwd::Cli => return std::fs::OpenOptions::new()
+            .read(false).write(true).create(true).append(true)
+            .open("../test.log" ).unwrap(),
+        }
+    }
+
+
+    match *pwd
+    {
+        Pwd::Gui => return std::fs::OpenOptions::new()
+                    .read(false).write(true).create(true).append(true)
+                    .open(form_filepath_from_id("../../async_net_engine/".into(), id) ).unwrap(),
+
+        Pwd::Cli => return std::fs::OpenOptions::new()
+                    .read(false).write(true).create(true).append(true)
+                    .open(form_filepath_from_id("../".into(), id)).unwrap()
+    };
 }

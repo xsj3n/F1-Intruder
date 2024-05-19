@@ -26,13 +26,14 @@ import { GoArrowLeft, GoArrowRight } from "react-icons/go";
 
 export let payload_src: String[] | number[] | null = null
 export let file_path: String | null = null
-export let http_request: String | null = null
+export let http_request: String = ""
 
 export default function Home() {
   
 
   const [initalr, setInitialr] = useState("")
   const [payloadstrs, setPayloadstrs] = useState<String[]>([])
+  const payload_strings_ref = useRef<String[]>()
   const [payloadopt, setPayloadOpt] = useState("Word List")
   const [payloadsignlestr, setPayloadsinglestr] = useState("")
   
@@ -41,23 +42,15 @@ export default function Home() {
   const end_number_input = useRef<HTMLInputElement>(null)
   const step_number_input = useRef<HTMLInputElement>(null)
   const text_area_ref = useRef<HTMLTextAreaElement>(null)
-
+  
+  let lock_files_removed = false 
   useEffect(() => 
-  { 
-    if (!payloadstrs) {return}
-    if (payloadstrs.length > 100)
-    {
-      payload_src = payloadstrs
-      payloadstrs.splice(99)
-      return
-    } else if (payload_src)
-    {
-      setPayloadstrs(payload_src as String[])
-    }
-
+  {
+    console.log("Unlocking...")
+    invoke("unlock_net_engine", {}).then(() => {})
     
+  }, [])
 
-  }, [payloadstrs])
 
 
   const error_cache_memo: String = useMemo(() => 
@@ -221,7 +214,7 @@ export default function Home() {
 
       const dialog: HTMLDialogElement | null = document.getElementById("notifcation_modal") as HTMLDialogElement
       dialog?.showModal()
-      await sleep(4)
+      await sleep(2)
       dialog?.close()
     }
 
@@ -259,7 +252,13 @@ export default function Home() {
           turn_nums_to_num_array()
         }
 
-        http_request = text_area_ref.current?.value as string //src: trust me bro
+        if (text_area_ref.current == null) 
+        {
+          console.error("text area ref is null, for some reason")
+          return
+        }  
+        console.log("Permuations: ", payloadstrs)
+        http_request = text_area_ref.current.value   //src: trust me bro
         document.getElementById("run_btn")?.click()
 
       case "Start and End fields must be filled out.":
@@ -300,7 +299,7 @@ export default function Home() {
   }
 
   readcache()
-
+  
   return (
 
     <main>

@@ -1,10 +1,28 @@
 
 
-#[derive(Clone)]
 pub struct RequestandPermutation
 {
-    pub request: Vec<String>,
-    pub permutation: Vec<String>
+    pub request: Vec<HttpRequest>,
+    pub permutation: Vec<String>,
+}
+
+#[derive(Clone)]
+pub struct HttpRequest
+{
+    pub request: String,
+    pub request_number: u32
+}
+
+impl HttpRequest
+{
+    pub fn new(request: String, id: u32) -> HttpRequest
+    {
+        return HttpRequest
+        {
+            request: request,
+            request_number: id
+        }
+    }
 }
 
 impl RequestandPermutation

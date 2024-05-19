@@ -7,11 +7,9 @@ use rustls::{RootCertStore, ClientConfig};
 use tokio::{net::TcpStream, io::{AsyncWriteExt, AsyncReadExt}};
 use tokio::task::JoinHandle;
 
-use crate::interface_structs::RequestandPermutation;
+use crate::{get_pwd, interface_structs::{HttpRequest, RequestandPermutation}, Pwd};
 use crate::log::{log_f, LogType};
 
-
-// ASYNC RE_WRITE===
 struct WorkerLoad
 {
     work_grp_num: u32,
@@ -26,20 +24,6 @@ enum HttpStatus
     NotDone
 }
 
-pub enum TXCommand
-{
-    SendMetaData(String)
-    
-}
-
-pub enum InternalCommand
-{
-    Run, 
-    SetDefaultRequest(String),
-    ReadFile(String),
-    PermutateS(String),
-    PermutateN(String)
-}
 
 pub fn configure_workload(mut vector_rp: RequestandPermutation, reqs_per_thread: u32) -> Vec<RequestandPermutation>
 {
@@ -84,7 +68,6 @@ pub fn configure_workload(mut vector_rp: RequestandPermutation, reqs_per_thread:
         }
     }
 
-    log_f("CHK-DONE: PROVISIONING", LogType::Meta);
     return vector_collection;
 }
 
@@ -118,29 +101,30 @@ pub async fn start_taskmaster(domain_string: String, request_groupings: Vec<Requ
         .cloned()
     );
 
-    log_f("CHK: RootCertStore up", LogType::Meta);
-    log_f("CHK: Starting to spawn workers", LogType::Meta);
+    let pwd = Arc::new(get_pwd());
+    log_f("[*]: RootCertStore up", LogType::Meta, pwd.clone());
+    log_f("[*]: Starting to spawn workers", LogType::Meta, pwd.clone());
 
-    let mut straggler_kq_v: Vec<JoinHandle<()>> = Vec::new();
+    let mut requests_joinhandle_v: Vec<JoinHandle<()>> = Vec::new();
 
-    let mut thread_id: u32 = 1; //thread id 0 reserved for straggler tasks
+    let mut thread_id: u32 = 0;
     for rp in request_groupings
     {
         let root_store_dup = root_store.clone();
         let d_s = domain_string.clone();
        
-        straggler_kq_v.push(tokio::spawn(start_worker(d_s,rp , root_store_dup, thread_id)));
+        requests_joinhandle_v.push(tokio::spawn(start_worker(d_s,rp , root_store_dup, thread_id, pwd.clone())));
         thread_id += 1;
     }
 
-    join_all(straggler_kq_v).await;
+    join_all(requests_joinhandle_v).await;
 }
 
 
-async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutation, root_store: RootCertStore, thread_id: u32) -> ()
+async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutation, root_store: RootCertStore, thread_id: u32, pwd: Arc<Pwd>) -> ()
 {
    
-    println!("Worker reporting in...");
+    println!("[+] Worker {} started", thread_id.to_string());
     // this just lets jus boot our connection back up if we get our connection closed on us
     // this can happen if the server returns a 404 and insta-closes 
     let mut straggler_kq_v: Vec<JoinHandle<()>> = Vec::new();
@@ -186,7 +170,7 @@ async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutat
                 return;
             }
 
-            t.write_all(rs.as_bytes()).await.unwrap();
+            t.write_all(rs.request.as_bytes()).await.unwrap();
             t.flush().await.unwrap();
             
             let mut b: Vec<u8> = Vec::new();
@@ -194,50 +178,50 @@ async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutat
             
             loop 
             {
-                
-
-                // failing to avoid this read when there is nothing left, is e v e r y thing
                 let _bytes_read = t.read(&mut rd_buf[..]).await.unwrap();
-                if _bytes_read == 0 
+                if _bytes_read == 0 // this is bad, lets hope this does not happen
                 { 
             
-                    straggler_kq_v.push(kq_straggler(d_s.clone(), &rs, root_store.clone()));
+                    straggler_kq_v.push(
+                        kq_straggler(d_s.clone(), &rs.request, root_store.clone(), pwd.clone(), rs.request_number)
+                    );
                     resume += 1;
                     continue 'worker_start;
-                } // TODO: we would log a failure
+                } 
+
                 b.extend_from_slice(&rd_buf[.._bytes_read]);
            
                 
-               match chk_if_http_is_done(&b).await
-               {
-                    HttpStatus::FullyConstructed => 
-                    {
-                       
-                        let fin = String::from_utf8_lossy(&b)
-                            .to_string();
-
-                        let log_s = form_log_string(rs, fin);
-                        log_f(log_s, LogType::DataFile(thread_id));
-                    
-                        resume += 1;
-                        continue 'request_iteration_start;
-                    }
-    
-                    HttpStatus::FullyConstructedHeaderOnly =>
-                    {
+                match chk_if_http_is_done(&b).await
+                {
+                        HttpStatus::FullyConstructed => 
+                        {
                         
-                        let fin = String::from_utf8_lossy(&b)
-                            .to_string();
+                            let fin = String::from_utf8_lossy(&b)
+                                .to_string();
 
-                        let log_s = form_log_string(rs, fin);
-                        log_f(log_s, LogType::DataFile(thread_id));
+                            let log_s = form_log_string(&rs.request, fin, rs.request_number);
+                            log_f(log_s, LogType::DataFile(thread_id), pwd.clone());
+                        
+                            resume += 1;
+                            continue 'request_iteration_start;
+                        }
+        
+                        HttpStatus::FullyConstructedHeaderOnly =>
+                        {
+                            
+                            let fin = String::from_utf8_lossy(&b)
+                                .to_string();
 
-                        resume += 1;
-                        continue 'request_iteration_start;
-                    }
+                            let log_s = form_log_string(&rs.request, fin, rs.request_number);
+                            log_f(log_s, LogType::DataFile(thread_id), pwd.clone());
 
-                    HttpStatus::NotDone => continue
-               }
+                            resume += 1;
+                            continue 'request_iteration_start;
+                        }
+
+                        HttpStatus::NotDone => continue
+                }
      
                
             }   
@@ -341,11 +325,13 @@ async fn determine_body_sz_in_accum(accum: &[u8]) -> isize
 }
 
 
-fn kq_straggler(d_s: String,rs: &str, root_store: RootCertStore) -> JoinHandle<()>
+fn kq_straggler(d_s: String,rs: &str, root_store: RootCertStore, pwd: Arc<Pwd>, id: u32) -> JoinHandle<()>
 {
+
+    let hr = HttpRequest::new(rs.to_string(), id);
     let r = RequestandPermutation
     {
-        request: vec![rs.to_string(); 1],
+        request: vec![hr; 1],
         permutation: vec!["perm".to_string(); 1]
     };
 
@@ -353,34 +339,42 @@ fn kq_straggler(d_s: String,rs: &str, root_store: RootCertStore) -> JoinHandle<(
 
     return tokio::spawn(async move 
     {
-        start_worker(d_s, r, root_store, 0).await;
+        start_worker(d_s, r, root_store, 0, pwd).await;
     });
 }
 
-fn form_log_string(request: &str, response: String) -> String
+fn form_log_string(request: &str, response: String, request_id: u32) -> String
 {
     let mut log = String::new();
-    log.push_str("=R\n"); //request delimiter for log file, for ease of parsing from tauri/nextjs
+    let id_s = request_id.to_string();
+    log.push_str("=R†="); //request delimiter for log file, for ease of parsing from tauri/nextjs
+    log.push_str(&id_s);
+    log.push_str("=|");
     log.push_str(&request);
-    log.push_str("=RR\n"); //response delimiter 
+    log.push_str("=RR†="); //response delimiter 
     log.push_str(&response);
-
+    log.push_str("=†=");
     return log;
 }
 
-
+/* 
 mod tests
 {
     use std::io::Read;
+
+    use crate::interface_structs::HttpRequest;
 
     use super::*;
 
     #[test]
     fn test_workload_provisioning() -> ()//bool
     {
-        let mut rp = RequestandPermutation
+        let mut id_c = 0;
+        let http_request = HttpRequest::new("foo".to_string(), 0);
+        let rp = RequestandPermutation
         {
-            request: vec!["rock".to_string();377],
+       
+            request: vec!["rock".;377],
             permutation: vec!["reskl".to_string();377]
         };
         let ilen = rp.request.len();
@@ -399,3 +393,4 @@ mod tests
         
 }   
 
+*/
