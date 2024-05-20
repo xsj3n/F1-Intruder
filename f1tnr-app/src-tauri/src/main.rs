@@ -166,18 +166,7 @@ fn parse_burp_file() -> String
 {
     match std::fs::read_to_string("/tmp/request.data")
     {
-      Ok(s) => 
-      {
-        let mut r = s.lines()
-        .filter(|line| line.contains("Host: "))
-        .next().unwrap().split("Host: ");
-
-        _ = r.next();
-        
-        return r.next().unwrap()
-        .trim().into()
-
-      }, 
+      Ok(s) => return s, 
       Err(_) => 
       {
         return String::new();

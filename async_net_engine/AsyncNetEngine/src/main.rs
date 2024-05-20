@@ -28,7 +28,9 @@ async fn main() // params will be the orginal request, and the permutations
         return;
     };
 
-    let request = add_clrf_to_arguement_string(args[1].clone());
+    let mut request = args[1].clone().lines().map(|l| l.to_string() + "\r\n").collect::<String>()
+    .trim().to_string();
+    request.push_str("\r\n\r\n");
     println!("[+] Request:\n{}", &request);
 
 
@@ -49,7 +51,7 @@ async fn main() // params will be the orginal request, and the permutations
     
     let request_s_2 = request.clone();
     let rp = synth_request_groups(request, permutations);
-    let rp_v = configure_workload(rp, 12);
+    let rp_v = configure_workload(rp, 5);
     
     spawn_blocking(move || async
     {

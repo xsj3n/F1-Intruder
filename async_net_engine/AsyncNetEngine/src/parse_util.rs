@@ -54,10 +54,12 @@ pub fn parse_uri(full_uri: String) -> URICOMPONENTS
 */
 pub fn parse_hostname(request: String) -> String
 {
-    let mut request_lines = request.lines().filter(|l| l.contains("Host: ") );
-    _ = request_lines.next();
-    return request_lines.next().unwrap().to_string();
+    let hostname = request.split("\r\n")
+    .nth(1).unwrap()
+    .split("Host: ").nth(1).unwrap()
+    .to_string();
 
+    return hostname
 }
 
 

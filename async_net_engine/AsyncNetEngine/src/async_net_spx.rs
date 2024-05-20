@@ -24,6 +24,15 @@ enum HttpStatus
     NotDone
 }
 
+/*
+TODO:
+ 1. Ill have to handle br, gzip, compress, deflate, zstd, etc
+ 2. 
+
+
+*/
+
+
 
 pub fn configure_workload(mut vector_rp: RequestandPermutation, reqs_per_thread: u32) -> Vec<RequestandPermutation>
 {

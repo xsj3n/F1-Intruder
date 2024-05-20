@@ -46,13 +46,14 @@ export default function Home() {
   let lock_files_removed = false 
   useEffect(() => 
   {
-    console.log("Unlocking...")
-    invoke("unlock_net_engine", {}).then(() => {})
-    if (text_area_ref.current != null)
+    const fetch_request = async () =>
     {
-      text_area_ref.current.value = invoke("parse_burp_file", {}).then(s => s) as unknown as string
+      invoke("unlock_net_engine", {}).then(() => {})
+      let initr: string  = await invoke("parse_burp_file", {}).then(s => s) as unknown as string
+      setInitialr(initr)
     }
     
+    fetch_request().catch(console.error)
 
   }, [])
 
