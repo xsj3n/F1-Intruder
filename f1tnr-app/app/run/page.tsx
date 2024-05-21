@@ -6,7 +6,7 @@ import { HttpData, http_columns } from "@/components/ui/s_columns";
 import { Textarea } from "@/components/ui/textarea";
 import { invoke } from "@tauri-apps/api/tauri";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { file_path, http_request, payload_src } from "../page";
+import { file_path, http_request, payload_src, thread_num } from "../page";
 import { listen, emit } from "@tauri-apps/api/event";
 
 
@@ -52,6 +52,7 @@ export default function Run()
     const [HttpRespData, setHttpRespData] = useState<HttpData[]>([])
     const http_data_buffer = useRef<HttpData[]>([])
     const known_ids = useRef<Number[]>([])
+    const progress = useRef<Number>(0)
     const setHttpData = (data: HttpData[]) =>
     {
       http_data_buffer.current = data
@@ -73,7 +74,8 @@ export default function Run()
     useEffect(() => 
       {
         emit("ready", {theMessage: "ready"})  
-        invoke("start_async_engine", {httpRequest: http_request, permutationFilepath: "../../async_net_engine/wordlist-0-1.txt"})
+        invoke("start_async_engine", {httpRequest: http_request, permutationFilepath: "../../async_net_engine/wordlist-0-1.txt", threadsNum: thread_num})
+        
         const unlisten_poll = listen("data-poll", (e) => 
           {
             invoke("refresh_datadir_cache", {})
@@ -104,6 +106,7 @@ export default function Run()
 
             console.log("Pushing more data onto array. Current len: ", http_data_buffer.current.length)
             http_data_buffer.current.push(data)
+            progress.current = progress.current as number + 1
             console.log("Buffer indexes: ", http_data_buffer.current.length)
             setHttpData([...http_data_buffer.current].sort((a,b) => a.id.valueOf() - b.id.valueOf()) )
             
@@ -121,7 +124,7 @@ export default function Run()
     return(
         <div className="grid grid-rows-1">
             <HttpTable columns={http_columns} data={HttpRespData} cn={"w-full h-96 overflow-y-scroll"} sethr={setRequestResponseTextarea}></HttpTable>
-            <div><Progress></Progress></div>
+            <div><Progress value={progress.current.valueOf()} max={payload_src?.length}></Progress></div>
             <div className="flex h-1/2 ">
                 <div className="w-1/2"><Textarea ref={http_request_textarea_ref}></Textarea></div>
                 <div className="w-1/2"><Textarea ref={http_response_textarea_ref}></Textarea></div>

@@ -1,11 +1,12 @@
 
-use std::sync::Arc;
+use std::{io::Error, sync::Arc};
 
 use futures::future::join_all;
 use rustls::{RootCertStore, ClientConfig};
 
-use tokio::{net::TcpStream, io::{AsyncWriteExt, AsyncReadExt}};
+use tokio::{io::{self, AsyncReadExt, AsyncWriteExt}, net::TcpStream};
 use tokio::task::JoinHandle;
+use tokio_rustls::client::TlsStream;
 
 use crate::{get_pwd, interface_structs::{HttpRequest, RequestandPermutation}, Pwd};
 use crate::log::{log_f, LogType};
@@ -24,19 +25,177 @@ enum HttpStatus
     NotDone
 }
 
+struct TlsConnection
+{
+    tls_pipe: Option<TlsStream<TcpStream>>,
+    keepalive_support: Option<bool>,
+    domain_string: String,
+    root_store: RootCertStore
+}
+
+impl TlsConnection
+{
+    pub async fn new(domain_s: String, root_store: RootCertStore) -> io::Result<TlsConnection>
+    {
+        let tcp_stream = TcpStream::connect(domain_s.clone() + ":443").await?;
+
+        tcp_stream.set_nodelay(true).unwrap();
+    
+        let client_config = ClientConfig::builder()
+            .with_root_certificates(root_store.clone())
+            .with_no_client_auth();
+    
+        let conn = tokio_rustls::TlsConnector::from(Arc::new(client_config));
+    
+        let tls_stream = conn.connect(domain_s.clone().try_into().unwrap(), tcp_stream).await?;
+      
+
+        return Ok(TlsConnection
+        {
+            tls_pipe: Some(tls_stream),
+            keepalive_support: None,
+            domain_string: domain_s,
+            root_store: root_store
+        });
+    }
+
+    pub fn borrow_pipe(&mut self) -> Result<&mut TlsStream<TcpStream>, Error>
+    {
+        match &mut self.tls_pipe
+        {
+            Some(t) => return Ok(t),
+            None => return Err(Error::new(io::ErrorKind::BrokenPipe, "Tls stream pipe is closed"))
+        };
+    }
+
+    pub async fn reconnect(&mut self) -> io::Result<()>
+    {
+        let tcp_stream = TcpStream::connect(self.domain_string.clone() + ":443").await?;
+
+        tcp_stream.set_nodelay(true).unwrap();
+    
+        let client_config = ClientConfig::builder()
+            .with_root_certificates(self.root_store.clone())
+            .with_no_client_auth();
+    
+        let conn = tokio_rustls::TlsConnector::from(Arc::new(client_config));
+    
+        self.tls_pipe = Some(conn.connect(self.domain_string.clone().try_into().unwrap(), tcp_stream).await?);
+
+        return Ok(());
+    }
+
+    async fn chk_if_keepalive_supported(&mut self, response: &str) -> bool
+    {
+        let response_head = response.split("\r\n\r\n").next().unwrap();
+        if response_head.contains("Connection: close\r\n") 
+        {
+            self.keepalive_support = Some(false);
+            return false;
+        }
+        
+        self.keepalive_support = Some(true);
+        return true; 
+
+    }
+
+    pub async fn make_http_request(&mut self, request: &str, request_id: u32, thread_id: u32, pwd: Arc<Pwd>)  -> io::Result<()>
+    {
+        let now = std::time::Instant::now();
+        // use client again if keep alive, if not, use a new one 
+        let tls_ref = match self.borrow_pipe()
+        {
+            Ok(t) => t,
+            Err(_) =>
+            {
+                self.reconnect().await?;
+                self.borrow_pipe()?
+            },
+        };
+        
+        tls_ref.write_all(request.as_bytes()).await?;
+        tls_ref.flush().await.unwrap();
+        
+        let mut buffer: Vec<u8> = Vec::new();
+        let mut rd_buf = [0u8; 4096];
+ 
+        loop
+        {
+            let bytes_r = tls_ref.read(&mut rd_buf[..]).await?;
+            buffer.extend_from_slice(&rd_buf[..bytes_r]);
+
+            match chk_if_http_is_done(&buffer).await
+            {
+                HttpStatus::FullyConstructed => 
+                {
+                
+                    let fin = String::from_utf8_lossy(&buffer)
+                        .to_string();
+
+
+                    let ka_support = match self.keepalive_support
+                    {
+                        Some(support) => support,
+                        None => self.chk_if_keepalive_supported(&fin).await,
+                    };
+
+                    if !ka_support
+                    {
+                        _ = self.tls_pipe.as_mut().unwrap().shutdown().await;
+                        self.tls_pipe = None;
+                    }
+
+
+                    let log_s = form_log_string(request, fin, request_id);
+                    log_f(log_s, LogType::DataFile(thread_id), pwd.clone());
+                    break;
+                }
+
+                HttpStatus::FullyConstructedHeaderOnly =>
+                {
+                    
+                    let fin = String::from_utf8_lossy(&buffer)
+                        .to_string();
+
+
+                    let ka_support = match self.keepalive_support
+                    {
+                        Some(support) => support,
+                        None => self.chk_if_keepalive_supported(&fin).await,
+                    };
+
+                    if !ka_support
+                    {
+                        _ = self.tls_pipe.as_mut().unwrap().shutdown().await;
+                        self.tls_pipe = None;
+                    }
+
+                    let log_s = form_log_string(request, fin, request_id);
+                    log_f(log_s, LogType::DataFile(thread_id), pwd.clone());
+
+                    break;
+                }
+
+                HttpStatus::NotDone => continue
+            }
+
+        }
+
+        println!("Request {} took {} seconds!", request_id, now.elapsed().as_secs());
+        Ok(())
+    }
+}
+
 /*
 TODO:
- 1. Ill have to handle br, gzip, compress, deflate, zstd, etc
- 2. 
-
-
+ 1. Ill have to handle br, gzip, compress, deflate, zstd, etc OR strip accept-encoding from all requests
+ 2. Handle
 */
 
 
 
 pub fn configure_workload(mut vector_rp: RequestandPermutation, reqs_per_thread: u32) -> Vec<RequestandPermutation>
 {
-  
 
     assert!(vector_rp.request.len() == vector_rp.permutation.len());
     let ilen = vector_rp.request.len();
@@ -134,117 +293,26 @@ async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutat
 {
    
     println!("[+] Worker {} started", thread_id.to_string());
-    // this just lets jus boot our connection back up if we get our connection closed on us
-    // this can happen if the server returns a 404 and insta-closes 
-    let mut straggler_kq_v: Vec<JoinHandle<()>> = Vec::new();
-    let mut resume = 0; // -1 as it will be used for indexing
-    'worker_start: loop {
-        let tcp_stream = match TcpStream::connect(d_s.clone() + ":443").await
-        {
-            Ok(t) => t,
-            Err(_) => 
-            {
-    
-                return;
-            }
-        };
-        tcp_stream.set_nodelay(true).unwrap();
-    
-        //println!("===Starting Worker...");
-        let client_config = ClientConfig::builder()
-            .with_root_certificates(root_store.clone())
-            .with_no_client_auth();
-    
-        let conn = tokio_rustls::TlsConnector::from(Arc::new(client_config));
-    
-  
-        let mut t = match conn.connect(d_s.clone().try_into().unwrap(), tcp_stream).await
-        {
-            Ok(t) => t,
-            Err(_) => 
-            {
-                let dbg_s = "[!] Worker unable to connect to ".to_string() + &d_s;
-                println!("{}", &dbg_s);
-                return;
-    
-                
-            }
-        };
-        
-        
-        'request_iteration_start: for rs in &request_perumation_buffer.request[resume..]
-        {
-            if resume == request_perumation_buffer.request.len()
-            {
-                return;
-            }
 
-            t.write_all(rs.request.as_bytes()).await.unwrap();
-            t.flush().await.unwrap();
-            
-            let mut b: Vec<u8> = Vec::new();
-            let mut rd_buf = [0u8; 4096];
-            
-            loop 
-            {
-                let _bytes_read = t.read(&mut rd_buf[..]).await.unwrap();
-                if _bytes_read == 0 // this is bad, lets hope this does not happen
-                { 
-            
-                    straggler_kq_v.push(
-                        kq_straggler(d_s.clone(), &rs.request, root_store.clone(), pwd.clone(), rs.request_number)
-                    );
-                    resume += 1;
-                    continue 'worker_start;
-                } 
-
-                b.extend_from_slice(&rd_buf[.._bytes_read]);
-           
-                
-                match chk_if_http_is_done(&b).await
-                {
-                        HttpStatus::FullyConstructed => 
-                        {
-                        
-                            let fin = String::from_utf8_lossy(&b)
-                                .to_string();
-
-                            let log_s = form_log_string(&rs.request, fin, rs.request_number);
-                            log_f(log_s, LogType::DataFile(thread_id), pwd.clone());
-                        
-                            resume += 1;
-                            continue 'request_iteration_start;
-                        }
-        
-                        HttpStatus::FullyConstructedHeaderOnly =>
-                        {
-                            
-                            let fin = String::from_utf8_lossy(&b)
-                                .to_string();
-
-                            let log_s = form_log_string(&rs.request, fin, rs.request_number);
-                            log_f(log_s, LogType::DataFile(thread_id), pwd.clone());
-
-                            resume += 1;
-                            continue 'request_iteration_start;
-                        }
-
-                        HttpStatus::NotDone => continue
-                }
-     
-               
-            }   
+    let mut future_v: Vec<JoinHandle<()>> = Vec::new(); 
+    let mut resume = 0; 
     
-            
-            
+    let mut tls = TlsConnection::new(d_s, root_store).await.unwrap();
     
-        }
-        break;
+
+    for http_r in &request_perumation_buffer.request
+    {
+       
+        tls.make_http_request(&http_r.request, http_r.request_number, thread_id, pwd.clone()).await.unwrap();
     }
-    
-    join_all(straggler_kq_v).await; 
+
+
+
+    join_all(future_v).await; 
     return;
 }
+
+
 
 
 
@@ -258,24 +326,14 @@ async fn chk_if_http_is_done(accum: &[u8]) -> HttpStatus
     let target_len  = chk_content_length(&accum).await;
     let current_len = determine_body_sz_in_accum(&accum).await;
 
-    //println!("{} out of {} body bytes read!", current_len, target_len);
-
-    if response.len() != 0 
-    {
-        //assert!(response.contains("HTTP/1.1"));
-    }
-
-
     if response.contains("\r\n\r\n") && !response.contains("Content-Length") && !response.contains("content-length")
     {
-        //println!("Valid-HO:\n{}", response);
         return HttpStatus::FullyConstructedHeaderOnly; // No body, message end 
         
     }
 
     if response.contains("\r\n\r\n") && target_len <= current_len
     {
-        //println!("Valid:\n{}", response);
         return HttpStatus::FullyConstructed;
     }
 

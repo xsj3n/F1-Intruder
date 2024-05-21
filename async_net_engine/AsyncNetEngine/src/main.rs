@@ -1,8 +1,9 @@
-use std::{env::{self, args}, io, process::Command};
+use std::{env::{self, args}, fs::File, io::{self, Read}, process::Command};
 
 use async_net_spx::configure_workload;
 use parse_util::synth_request_groups;
 use tokio::task::spawn_blocking;
+use fs4::FileExt;
 
 use crate::parse_util::add_clrf_to_arguement_string;
 
@@ -16,19 +17,21 @@ pub mod log;
 #[tokio::main]
 async fn main() // params will be the orginal request, and the permutations
 {
-
-    let pwd = get_pwd();
-    _ = check_lock(pwd);
+    let file_lock = chk_lock();
 
     let args: Vec<String> = env::args().collect();
 
-    if args.len() > 3
+    if args.len() > 4
     {
-        println!("Not enough arguments. <HttpRequest> <FilePathToPermutations> are the required arguments.");
+        println!("Not enough arguments. <HttpRequest> <FilePathToPermutations> <# of threads> are the required arguments.");
         return;
     };
 
-    let mut request = args[1].clone().lines().map(|l| l.to_string() + "\r\n").collect::<String>()
+    
+
+    let mut request = args[1].clone().lines().map(|l| l.to_string() + "\r\n") // lines() strips clrf
+    .filter(|l| !l.contains("Accept-Encoding:"))
+    .collect::<String>()
     .trim().to_string();
     request.push_str("\r\n\r\n");
     println!("[+] Request:\n{}", &request);
@@ -49,14 +52,26 @@ async fn main() // params will be the orginal request, and the permutations
         todo!() //signal that paths will be different 
     }
     
+    let thread_number = match args[3].parse::<u32>()
+    {
+        Ok(num) => num,
+        Err(_) => 10
+    };
+    println!("Threads: {}", thread_number);
+
     let request_s_2 = request.clone();
     let rp = synth_request_groups(request, permutations);
-    let rp_v = configure_workload(rp, 5);
+    let total_req_num = rp.permutation.len();
+    let rp_v = configure_workload(rp, thread_number);
     
+
+    let now = std::time::Instant::now();
     spawn_blocking(move || async
     {
         async_net_spx::start_taskmaster(parse_util::parse_hostname(request_s_2), rp_v).await;
     }).await.unwrap().await;
+    println!("Finished all {} requests in {} seconds", total_req_num, now.elapsed().as_secs());
+    file_lock.unlock().unwrap();
 
     return 
 }
@@ -89,67 +104,37 @@ fn run_shell_cmd<C: AsRef<str>>(cmd: C) -> io::Result<String>
     
 }
 
-fn is_locked(pwd: Pwd) -> bool 
+fn chk_lock() -> File
 {
-    match pwd
+    match std::fs::File::open("/tmp/lock")
     {
-        Pwd::Gui => 
+        Ok(f) => 
         {
-            match std::fs::File::open("../../async_net_engine/lock")
+            match f.try_lock_exclusive()
             {
-                Ok(_) => return true,
-                Err(_) => return false,
+                Ok(_) => 
+                {
+                    println!("[*] Lock acquired...");
+                    return f;
+                },
+                Err(_) => 
+                {
+                    println!("[!] Locked! Exiting...");
+                    std::process::exit(2);
+                },
             }
         },
-        Pwd::Cli => 
+        Err(_) => 
         {
-            match std::fs::File::open("../lock")
-            {
-                Ok(_) => return true,
-                Err(_) => return false,
-            }
+            println!("[!] Locked! Exiting...");
+            std::process::exit(2); 
         },
     }
 }
 
-fn _unlock(pwd: Pwd) -> bool
-{
-    let mut cmd_prefix = "rm ".to_string();
-    match pwd
-    {
-        Pwd::Gui => cmd_prefix.push_str("../../async_net_engine/lock"),
-        Pwd::Cli => cmd_prefix.push_str("../lock")
-    };
 
 
-    match run_shell_cmd(cmd_prefix)
-    {
-        Ok(_) => return true,
-        Err(_) => return false,
-    }
-}
 
-fn check_lock(pwd: Pwd) 
-{
-    match is_locked(pwd)
-    {
-        true =>  
-        {
-            println!("[!] Lock file still present. Not running again.");
-            std::process::exit(2);
-        },
-        false => lock(pwd)
-    };
-}
-
-fn lock(pwd: Pwd)
-{
-    match pwd
-    {
-        Pwd::Gui => run_shell_cmd("touch ../../async_net_engine/lock").unwrap(),
-        Pwd::Cli => run_shell_cmd("touch ../lock").unwrap(),
-    };
-}
 
 fn get_pwd() -> Pwd
 {

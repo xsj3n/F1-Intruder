@@ -178,11 +178,12 @@ fn parse_burp_file() -> String
 
 
 #[tauri::command]
-fn start_async_engine(http_request: String, permutation_filepath: String)
+fn start_async_engine(http_request: String, permutation_filepath: String, threads_num: String)
 {
     let _: std::process::Child = Command::new("../../async_net_engine/AsyncNetEngine/target/debug/AsyncNetEngine")
     .arg(http_request)
     .arg(permutation_filepath)
+    .arg(threads_num)
     .spawn().unwrap();
 
     return
@@ -316,7 +317,12 @@ async fn parse_http_rsp(response: String) -> Result<HttpResponse, String>
                 full_response_string: response
             })
         },
-        Err(e) => return Err(e.to_string()),
+        Err(e) => 
+        {
+            let err_s = e.to_string();
+            println!("Request parse failure - {}:\n{}", &err_s[..20], &response); 
+            return Err(err_s);
+        },
     }
 }
 

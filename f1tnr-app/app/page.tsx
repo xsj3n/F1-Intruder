@@ -27,6 +27,7 @@ import { GoArrowLeft, GoArrowRight } from "react-icons/go";
 export let payload_src: String[] | number[] | null = null
 export let file_path: String | null = null
 export let http_request: String = ""
+export let thread_num: String = "10"
 
 export default function Home() {
   
@@ -41,6 +42,7 @@ export default function Home() {
   const start_number_input = useRef<HTMLInputElement>(null)
   const end_number_input = useRef<HTMLInputElement>(null)
   const step_number_input = useRef<HTMLInputElement>(null)
+  const thread_number_input = useRef<HTMLInputElement>(null)
   const text_area_ref = useRef<HTMLTextAreaElement>(null)
   
   let lock_files_removed = false 
@@ -252,10 +254,17 @@ export default function Home() {
 
         if (text_area_ref.current == null) 
         {
-          console.error("text area ref is null, for some reason")
+          modal_peep("Request area empty")
           return
-        }  
+        }
+        
+        if (thread_number_input.current != null)
+        {
+          thread_num = thread_number_input.current.value
+        }
+
         console.log("Permuations: ", payloadstrs)
+        
         http_request = text_area_ref.current.value   //src: trust me bro
         document.getElementById("run_btn")?.click()
 
@@ -321,7 +330,7 @@ export default function Home() {
           <div></div>
           <br />
           {LabeledSeparator("Threading options")}
-          <div className=""><Input className="w-6/12" type="Number of requests per thread" placeholder="Number of requests per thread"></Input></div>
+          <div className=""><Input className="w-6/12" type="Number of requests per thread" placeholder="Number of requests per thread" ref={thread_number_input}></Input></div>
           <br />
          <div className=""><Button className="w-1/2" variant={"outline"} onClick={handle_run}>Run</Button></div>
          <dialog id="notifcation_modal">
