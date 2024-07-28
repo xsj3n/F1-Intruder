@@ -12,13 +12,13 @@ import { Button } from "./button"
 
 
 export type HttpData = {
-    id: Number,
-    payload: String,
-    status_code: Number,
-    status_string: String,
-    length: Number,
-    request: String,
-    response: String
+    id: number,
+    payload: string,
+    status_code: number,
+    status_string: string,
+    length: string,
+    request: string,
+    response: string
 }
 
 export let http_table_inst: Table<HttpData> | null = null

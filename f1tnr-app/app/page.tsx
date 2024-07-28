@@ -9,6 +9,9 @@ import { remove_toggled_strs_was_ran, set_remove_toggled_strs_was_ran, strs_to_b
 import { Input } from "@/components/ui/input"
 import { open } from '@tauri-apps/api/dialog'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import hljs from 'highlight.js/lib/core'
+import javascript from 'highlight.js/lib/languages/javascript'
+import httl_hl from 'highlight.js/lib/languages/http'
 
 import { invoke } from '@tauri-apps/api/tauri'
 import { emit, listen } from '@tauri-apps/api/event'
@@ -18,23 +21,24 @@ import { Separator } from "@/components/ui/separator"
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, HandMetal } from "lucide-react";
-import { sleep} from "./run/page";
+
 import { GoArrowLeft, GoArrowRight } from "react-icons/go";
+import { setGlobalHttpBaseRequest, setGlobalPayloadFilepath, setGlobalPayloadSrc, setGlobalThreadNums } from "./global_state";
+import { sleep } from "./sleep";
+import { Hlta } from "@/components/ui/highlighted-textarea";
+
+
+hljs.registerLanguage("javascript", javascript)
+hljs.registerLanguage("http", httl_hl)
 
 
 
-
-export let payload_src: String[] | number[] | null = null
-export let file_path: String | null = null
-export let http_request: String = ""
-export let thread_num: String = "10"
 
 export default function Home() {
-  
+  invoke("empty_cache_dir", {})
 
   const [initalr, setInitialr] = useState("")
   const [payloadstrs, setPayloadstrs] = useState<String[]>([])
-  const payload_strings_ref = useRef<String[]>()
   const [payloadopt, setPayloadOpt] = useState("Word List")
   const [payloadsignlestr, setPayloadsinglestr] = useState("")
   
@@ -43,19 +47,50 @@ export default function Home() {
   const end_number_input = useRef<HTMLInputElement>(null)
   const step_number_input = useRef<HTMLInputElement>(null)
   const thread_number_input = useRef<HTMLInputElement>(null)
-  const text_area_ref = useRef<HTMLTextAreaElement>(null)
+  const text_area_ref = useRef<HTMLDivElement>(null)
   
-  let lock_files_removed = false 
+  useEffect(() => {
+
+    const handle_enter_keypress = (e: KeyboardEvent) =>
+    {
+      if (e.key != "Enter") {return}
+      e.preventDefault()
+      document.getElementById("addinput")?.click()
+    }
+    if (string_add_ref_inp.current != null)
+    {
+      string_add_ref_inp.current.addEventListener("keypress", handle_enter_keypress)
+    }
+
+    return(() =>
+    {
+      string_add_ref_inp.current?.removeEventListener("keypress", handle_enter_keypress)
+    })
+  },[string_add_ref_inp.current])
+
   useEffect(() => 
   {
+
+
+
+
+    
     const fetch_request = async () =>
     {
-      invoke("unlock_net_engine", {}).then(() => {})
-      let initr: string  = await invoke("parse_burp_file", {}).then(s => s) as unknown as string
+      invoke("unlock_net_engine", {})
+      let initr: string  = await invoke("parse_burp_file", {})
       setInitialr(initr)
     }
     
     fetch_request().catch(console.error)
+
+    return (() =>
+    {
+      setInitialr("")
+      setPayloadstrs([])
+      setPayloadOpt("")
+      setPayloadsinglestr("")
+    })
 
   }, [])
 
@@ -67,16 +102,23 @@ export default function Home() {
     switch (payloadopt)
     {
       case "numbers":
-        if (start_number_input.current?.value != "" || end_number_input.current?.value  != "") {return "None"}
+        if (start_number_input.current?.value != "" || end_number_input.current?.value  != "")
+        {
+          return "Ready"
+        }
         console.error("Number fields not filled")
         return "Start and End fields must be filled out."
 
       case "wordlist": 
-        if (payloadstrs.length != 0) {return "None"}
-        console.error("Payload strings are empty")
+        if (payloadstrs.length != 0)
+        {
+          return "Ready"
+
+        }
+
         return "Add at least one string to the payload table or load strings from a line-breaked file."
       
-        default:
+      default:
         return "None"
         
     }
@@ -95,7 +137,7 @@ export default function Home() {
     const selected = await open({});
 
     if (Array.isArray(selected) || selected == null) { return }
-    file_path = selected
+    setGlobalPayloadFilepath(selected)
 
     const contents = readTextFile(selected)
 
@@ -104,7 +146,7 @@ export default function Home() {
     data = data.filter((s) => s.trim() != "")
 
    
-    await setPayloadstrs(data)
+    setPayloadstrs(data)
 
   }
 
@@ -132,17 +174,11 @@ export default function Home() {
     addthenclear()
   }
 
-  string_add_ref_inp.current?.addEventListener("keypress", (e) =>
-  {
-    if (e.key != "Enter") {return}
-    e.preventDefault()
-    document.getElementById("addinput")?.click()
-  })
 
   const clearpayloadstrs = async function ()
   {
     let data: String[] = []
-    payload_src = null
+    setGlobalPayloadSrc([" "])
     set_remove_toggled_strs_was_ran(true)
     setPayloadsinglestr("")
     setPayloadstrs(data)
@@ -157,7 +193,7 @@ export default function Home() {
       let data = payloadstrs.filter((s) => true)
       clear_strs_to_be_removed()
       set_remove_toggled_strs_was_ran(true)
-      payload_src = payloadstrs
+      setGlobalPayloadSrc(payloadstrs)
       setPayloadstrs(data)
   }
 
@@ -208,6 +244,7 @@ export default function Home() {
 
   async function handle_run()
   {
+
     async function modal_peep(error: String)
     {
       if (error_cache_memo == "None") {return}
@@ -218,61 +255,83 @@ export default function Home() {
       dialog?.close()
     }
 
-    async function turn_nums_to_num_array()
+    function turn_nums_to_num_array(): boolean
     {
       let start = Number(start_number_input.current?.value)
-      let end = Number(end_number_input.current?.value)
-      let step = Number(step_number_input.current?.value)
+      let end   = Number(end_number_input.current?.value)
+      let step  = Number(step_number_input.current?.value)
 
       if (isNaN(start) || isNaN(end)) 
       { 
         modal_peep("Number fields must be populated with numbers")
-        return
+        return false
       }
 
-      let num_payload_indicators = []
 
-      num_payload_indicators.push(start)
-      num_payload_indicators.push(end)
-      if (!isNaN(step)) { num_payload_indicators.push(step)}
+      if (isNaN(step) || step == 0)
+      {
+        step = 1
+      }
 
-      payload_src = num_payload_indicators
+      let arr = [...Array(end).keys()]
+      .map((i) => i + step)
+      .filter((i) => i > start)
+      .map((i) => i.toString())
 
-      return 
+
+      console.log("PSLR ARR", arr.unshift(start.toString()) )
+      setGlobalPayloadSrc(arr)
+
+      return true
     }
 
     switch (error_cache_memo)
     {
-      case "None":
-        if (payloadopt == "wordlist") 
-        {
-          payload_src = payloadstrs
-        } else 
-        {
-          turn_nums_to_num_array()
-        }
-
-        if (text_area_ref.current == null) 
-        {
-          modal_peep("Request area empty")
-          return
-        }
-        
-        if (thread_number_input.current != null)
-        {
-          thread_num = thread_number_input.current.value
-        }
-
-        console.log("Permuations: ", payloadstrs)
-        
-        http_request = text_area_ref.current.value   //src: trust me bro
-        document.getElementById("run_btn")?.click()
 
       case "Start and End fields must be filled out.":
         modal_peep(error_cache_memo)
 
       case  "Add at least one string to the payload table or load strings from a line-breaked file.":
         modal_peep(error_cache_memo)
+
+      case "Ready":
+        if (text_area_ref.current == null)
+        {
+          modal_peep("Request area empty")
+          return
+        }
+
+
+        if (payloadopt == "wordlist") 
+        {
+          setGlobalPayloadSrc(payloadstrs)
+        } else
+        {
+          turn_nums_to_num_array()
+        }
+
+
+        if (thread_number_input.current != null && !isNaN(Number(thread_number_input.current.value)))
+        {
+          setGlobalThreadNums(thread_number_input.current.value)
+        }
+
+        
+        
+        
+        let run_button_node = document.getElementById("run_btn")
+        if (!run_button_node)
+        {
+          console.error("[!] Run button vnode is null")
+          return
+
+        }
+
+        console.log("Request:\n", text_area_ref.current.innerText)
+        setGlobalHttpBaseRequest(text_area_ref.current.innerText)
+        run_button_node.click()
+
+
     }
 
   }
@@ -293,32 +352,44 @@ export default function Home() {
   }
 
  function handle_cross_add(kind: number)
- {
-    text_area_ref.current?.focus()
-    let start = text_area_ref.current?.selectionStart 
-    let end = text_area_ref.current?.selectionEnd 
-    let chars = ["†", "‡"]
+  {
 
-    if (start == undefined || end == undefined ) {return}
+    let sel = window.getSelection()
+    if (!sel)
+    {
+      return
+    }
+    if (!sel.rangeCount)
+    {
+      return 
+    }
+    
+    let range = sel.getRangeAt(0)
+    range.deleteContents()
+    range.insertNode(document.createTextNode("†‡"))
+    
 
-    text_area_ref.current?.setRangeText( chars[kind], start , end)
-    return undefined
+  }
+
+  // <Textarea ref={text_area_ref} defaultValue={initalr}></Textarea>
+
+  if (initalr.length == 0)
+  {
+      return (<><h2>Loading...</h2></>)
   }
 
 
-  
+
+  5
   return (
 
-    <main>
-      <div className="grid grid-col-2 grid-flow-col gap-4">
-        <div className="min-h-full">
-          <Textarea ref={text_area_ref} defaultValue={initalr}></Textarea>
-        </div>
+    <main className="h-full">
+      <div className="flex gap-4 h-full">
+        <Hlta className="w-1/2" ref={text_area_ref} text={initalr} height="90vh" width=""></Hlta>
         <div className="mt-3 grid-rows-2 gap-5" id="cb">
           {LabeledSeparator("Add delimiters")}
           <div className="flex mb-4">
-            <div className="mr-4"><Button variant="outline" onClick={() => handle_cross_add(0)}>Add †</Button></div>
-            <div className=""><Button variant="outline" onClick={() => handle_cross_add(1)}>Add ‡</Button></div>
+            <div className="mr-4"><Button variant="outline" onClick={() => handle_cross_add(0)}>Add †‡</Button></div>
           </div>
           {LabeledSeparator("Payload options")}
           <div className="mb-3">

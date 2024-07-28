@@ -24,12 +24,12 @@ export default function Navbuttonclientwrapper({})
     {
         if (path == "/")
         {
+            console.log("pushing to /run")
             router.push("/run")
             return
 
         }
-        
-        invoke("unlock_net_engine", {}).then(() => {})
+    
         router.push("/")
         return
     }
