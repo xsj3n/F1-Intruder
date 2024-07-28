@@ -1,0 +1,5 @@
+[ x ] - Virtualized table
+[ - ] - Fix clipping on table header, look into z-indexing some more and hiding elements dynamically 
+[ - ] - Lean on the tmp dir and use all absolute paths
+[ - ] - Change background color of modal peep error 
+[ - ] - Insert barrier/border around custom highlighted text areas

@@ -8,7 +8,7 @@ use tokio::{io::{self, AsyncReadExt, AsyncWriteExt}, net::TcpStream};
 use tokio::task::JoinHandle;
 use tokio_rustls::client::TlsStream;
 
-use crate::{get_pwd, interface_structs::{HttpRequest, RequestandPermutation}, Pwd};
+use crate::{interface_structs::{HttpRequest, RequestandPermutation}, log::form_log_string};
 use crate::log::{log_f, LogType};
 
 struct WorkerLoad
@@ -35,14 +35,14 @@ struct TlsConnection
 
 impl TlsConnection
 {
-    pub async fn new(domain_s: String, root_store: RootCertStore) -> io::Result<TlsConnection>
+    pub async fn new(domain_s: String, root_store_obj: RootCertStore) -> io::Result<TlsConnection>
     {
         let tcp_stream = TcpStream::connect(domain_s.clone() + ":443").await?;
 
         tcp_stream.set_nodelay(true).unwrap();
     
         let client_config = ClientConfig::builder()
-            .with_root_certificates(root_store.clone())
+            .with_root_certificates(root_store_obj.clone())
             .with_no_client_auth();
     
         let conn = tokio_rustls::TlsConnector::from(Arc::new(client_config));
@@ -55,7 +55,7 @@ impl TlsConnection
             tls_pipe: Some(tls_stream),
             keepalive_support: None,
             domain_string: domain_s,
-            root_store: root_store
+            root_store: root_store_obj
         });
     }
 
@@ -99,21 +99,49 @@ impl TlsConnection
 
     }
 
-    pub async fn make_http_request(&mut self, request: &str, request_id: u32, thread_id: u32, pwd: Arc<Pwd>)  -> io::Result<()>
+    async fn log_http_data(&mut self, buffer: &[u8], request: &str, request_id: u32, thread_id: u32)
     {
+        let fin = String::from_utf8_lossy(&buffer).to_string();
+        println!("RESPONSE=======\n{}", &fin);
+        self.keep_alive_chk(&fin).await;
+
+        let log_s = form_log_string(request, fin, request_id);
+        log_f(log_s, LogType::DataFile(thread_id));
+    }
+
+    async fn keep_alive_chk(&mut self, final_s: &str)
+    {
+        let ka_support = match self.keepalive_support
+        {
+            Some(support) => support,
+            None => self.chk_if_keepalive_supported(final_s).await,
+        };
+
+        if !ka_support
+        {
+            _ = self.tls_pipe.as_mut().unwrap().shutdown().await;
+            self.tls_pipe = None;
+        }
+    }
+
+    pub async fn make_http_request(&mut self, request: &str, request_id: u32, thread_id: u32)  -> io::Result<String>
+    {
+        println!("REQUEST {} :\n", request_id);
+
+
         let now = std::time::Instant::now();
-        // use client again if keep alive, if not, use a new one 
+        // use client again if keep alive, if not, use a new oborrow_pipene
         let tls_ref = match self.borrow_pipe()
         {
             Ok(t) => t,
             Err(_) =>
             {
-                self.reconnect().await?;
-                self.borrow_pipe()?
+                self.reconnect().await.unwrap();
+                self.borrow_pipe().unwrap()
             },
         };
         
-        tls_ref.write_all(request.as_bytes()).await?;
+        tls_ref.write_all(request.as_bytes()).await.unwrap();
         tls_ref.flush().await.unwrap();
         
         let mut buffer: Vec<u8> = Vec::new();
@@ -121,58 +149,31 @@ impl TlsConnection
  
         loop
         {
-            let bytes_r = tls_ref.read(&mut rd_buf[..]).await?;
+            let bytes_r = match tls_ref.read(&mut rd_buf[..]).await
+            {
+                Ok(b) => b,
+                Err(_) =>
+                {
+                    // TODO:log error here
+                    self.log_http_data(&buffer, request, request_id, thread_id ).await;
+                    let _ = self.reconnect();
+                    return Ok(String::new())
+                },
+            };
+
             buffer.extend_from_slice(&rd_buf[..bytes_r]);
 
             match chk_if_http_is_done(&buffer).await
             {
                 HttpStatus::FullyConstructed => 
                 {
-                
-                    let fin = String::from_utf8_lossy(&buffer)
-                        .to_string();
-
-
-                    let ka_support = match self.keepalive_support
-                    {
-                        Some(support) => support,
-                        None => self.chk_if_keepalive_supported(&fin).await,
-                    };
-
-                    if !ka_support
-                    {
-                        _ = self.tls_pipe.as_mut().unwrap().shutdown().await;
-                        self.tls_pipe = None;
-                    }
-
-
-                    let log_s = form_log_string(request, fin, request_id);
-                    log_f(log_s, LogType::DataFile(thread_id), pwd.clone());
+                    self.log_http_data(&buffer, request, request_id, thread_id ).await;
                     break;
                 }
 
                 HttpStatus::FullyConstructedHeaderOnly =>
                 {
-                    
-                    let fin = String::from_utf8_lossy(&buffer)
-                        .to_string();
-
-
-                    let ka_support = match self.keepalive_support
-                    {
-                        Some(support) => support,
-                        None => self.chk_if_keepalive_supported(&fin).await,
-                    };
-
-                    if !ka_support
-                    {
-                        _ = self.tls_pipe.as_mut().unwrap().shutdown().await;
-                        self.tls_pipe = None;
-                    }
-
-                    let log_s = form_log_string(request, fin, request_id);
-                    log_f(log_s, LogType::DataFile(thread_id), pwd.clone());
-
+                    self.log_http_data(&buffer, request, request_id, thread_id ).await;
                     break;
                 }
 
@@ -182,14 +183,14 @@ impl TlsConnection
         }
 
         println!("Request {} took {} seconds!", request_id, now.elapsed().as_secs());
-        Ok(())
+        Ok(String::new())
     }
 }
 
 /*
 TODO:
  1. Ill have to handle br, gzip, compress, deflate, zstd, etc OR strip accept-encoding from all requests
- 2. Handle
+ 2. OR NOT and jus tell servers we dont do that shit around these parts
 */
 
 
@@ -198,6 +199,13 @@ pub fn configure_workload(mut vector_rp: RequestandPermutation, reqs_per_thread:
 {
 
     assert!(vector_rp.request.len() == vector_rp.permutation.len());
+    if vector_rp.request.len() < 25
+    {
+        let mut one_workload: Vec<RequestandPermutation> = Vec::new();
+        one_workload.push(vector_rp);
+        return one_workload;
+    }
+
     let ilen = vector_rp.request.len();
     let mut wrk = WorkerLoad
     {
@@ -268,10 +276,7 @@ pub async fn start_taskmaster(domain_string: String, request_groupings: Vec<Requ
         .iter()
         .cloned()
     );
-
-    let pwd = Arc::new(get_pwd());
-    log_f("[*]: RootCertStore up", LogType::Meta, pwd.clone());
-    log_f("[*]: Starting to spawn workers", LogType::Meta, pwd.clone());
+    println!("here");
 
     let mut requests_joinhandle_v: Vec<JoinHandle<()>> = Vec::new();
 
@@ -281,29 +286,28 @@ pub async fn start_taskmaster(domain_string: String, request_groupings: Vec<Requ
         let root_store_dup = root_store.clone();
         let d_s = domain_string.clone();
        
-        requests_joinhandle_v.push(tokio::spawn(start_worker(d_s,rp , root_store_dup, thread_id, pwd.clone())));
+        requests_joinhandle_v.push(tokio::spawn(start_worker(d_s,rp , root_store_dup, thread_id)));
         thread_id += 1;
     }
 
     join_all(requests_joinhandle_v).await;
+    
 }
 
 
-async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutation, root_store: RootCertStore, thread_id: u32, pwd: Arc<Pwd>) -> ()
+async fn start_worker(d_s: String, request_perumation_buffer: RequestandPermutation, root_store: RootCertStore, thread_id: u32) -> ()
 {
-   
+
     println!("[+] Worker {} started", thread_id.to_string());
 
-    let mut future_v: Vec<JoinHandle<()>> = Vec::new(); 
-    let mut resume = 0; 
-    
+    let future_v: Vec<JoinHandle<()>> = Vec::new();
     let mut tls = TlsConnection::new(d_s, root_store).await.unwrap();
-    
 
     for http_r in &request_perumation_buffer.request
     {
-       
-        tls.make_http_request(&http_r.request, http_r.request_number, thread_id, pwd.clone()).await.unwrap();
+        let _ = tls.make_http_request(&http_r.request, http_r.request_number, thread_id).await;
+
+
     }
 
 
@@ -323,18 +327,24 @@ async fn chk_if_http_is_done(accum: &[u8]) -> HttpStatus
 
 
     let response = String::from_utf8_lossy(&accum).to_string();
-    let target_len  = chk_content_length(&accum).await;
-    let current_len = determine_body_sz_in_accum(&accum).await;
+    let target_content_len  = chk_content_length(&accum).await;
+    let current_content_len = determine_body_sz_in_accum(&accum).await;
 
-    if response.contains("\r\n\r\n") && !response.contains("Content-Length") && !response.contains("content-length")
+    if !response.contains("\r\n\r\n")
     {
-        return HttpStatus::FullyConstructedHeaderOnly; // No body, message end 
-        
+        return HttpStatus::NotDone;
     }
 
-    if response.contains("\r\n\r\n") && target_len <= current_len
+
+    if !response.contains("Content-Length") && !response.contains("content-length") || target_content_len == 0
     {
-        return HttpStatus::FullyConstructed;
+        return HttpStatus::FullyConstructedHeaderOnly; // No body, message end 
+    }
+
+
+    if response.contains("\r\n\r\n") && target_content_len == current_content_len
+    {
+        return HttpStatus::FullyConstructed; // Headers are ended with CLRFCLRF && we have the desired amount of bytes
     }
 
     return HttpStatus::NotDone; // Incomplete response, read more;
@@ -347,8 +357,7 @@ async fn chk_content_length(accum: &[u8]) -> isize
     let lines = response.split("\r\n");
     for l in lines
     {
-        if response.contains("HTTP/1.1") &&
-        (l.contains("Content-Length") || l.contains("content-length")) && response.contains("\r\n\r\n") 
+        if response.contains("HTTP/1.1") && (l.contains("Content-Length") || l.contains("content-length")) && response.contains("\r\n\r\n")
         {
             let body_len = if l.contains("Content-Length") 
             {
@@ -383,8 +392,10 @@ async fn determine_body_sz_in_accum(accum: &[u8]) -> isize
         
         if !half.contains("HTTP/1.1") && !half.is_empty()
         {
+            println!("Half {}", half);
             return half.len().try_into().unwrap();
         }
+
         
     }
 
@@ -392,7 +403,7 @@ async fn determine_body_sz_in_accum(accum: &[u8]) -> isize
 }
 
 
-fn kq_straggler(d_s: String,rs: &str, root_store: RootCertStore, pwd: Arc<Pwd>, id: u32) -> JoinHandle<()>
+fn _kq_straggler(d_s: String,rs: &str, root_store: RootCertStore, id: u32) -> JoinHandle<()>
 {
 
     let hr = HttpRequest::new(rs.to_string(), id);
@@ -406,23 +417,11 @@ fn kq_straggler(d_s: String,rs: &str, root_store: RootCertStore, pwd: Arc<Pwd>, 
 
     return tokio::spawn(async move 
     {
-        start_worker(d_s, r, root_store, 0, pwd).await;
+        start_worker(d_s, r, root_store, 0).await;
     });
 }
 
-fn form_log_string(request: &str, response: String, request_id: u32) -> String
-{
-    let mut log = String::new();
-    let id_s = request_id.to_string();
-    log.push_str("=R†="); //request delimiter for log file, for ease of parsing from tauri/nextjs
-    log.push_str(&id_s);
-    log.push_str("=|");
-    log.push_str(&request);
-    log.push_str("=RR†="); //response delimiter 
-    log.push_str(&response);
-    log.push_str("=†=");
-    return log;
-}
+
 
 /* 
 mod tests

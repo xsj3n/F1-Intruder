@@ -1,7 +1,7 @@
-use std::{fs::File, io::Write, sync::Arc};
+use std::{fs::File, io::Write};
 use chrono::prelude::*;
 
-use crate::Pwd;
+
 
 pub enum LogType
 {
@@ -9,7 +9,24 @@ pub enum LogType
     DataFile(u32)
 }
 
-pub fn log_f<S: AsRef<str>>(msg: S, log_type: LogType, pwd: std::sync::Arc<Pwd>) -> ()
+pub fn form_log_string(request: &str, response: String, request_id: u32) -> String
+{
+    let mut log = String::new();
+    let id_s = request_id.to_string();
+    log.push_str("=R†="); //request delimiter for log file, for ease of parsing from tauri/nextjs
+    log.push_str(&id_s);
+    log.push_str("=|");
+    log.push_str(&request);
+    log.push_str("=RR†="); //response delimiter
+    log.push_str(&response);
+    log.push_str("=†=");
+    return log;
+}
+
+
+
+
+pub fn log_f<S: AsRef<str>>(msg: S, log_type: LogType) -> ()
 {
     let time: String = Local::now().to_string() + " ";
 
@@ -20,7 +37,7 @@ pub fn log_f<S: AsRef<str>>(msg: S, log_type: LogType, pwd: std::sync::Arc<Pwd>)
             let mut final_str_to_log = time + msg.as_ref();
             final_str_to_log.push_str("\n");
 
-            let mut file = open_log_file(pwd, 0, true);
+            let mut file = open_log_file(0, true);
             
             match writeln!(&mut file, "{}", final_str_to_log) 
             {
@@ -31,7 +48,7 @@ pub fn log_f<S: AsRef<str>>(msg: S, log_type: LogType, pwd: std::sync::Arc<Pwd>)
         },
         LogType::DataFile(id) =>
         {
-            let mut file = open_log_file(pwd, id, false);
+            let mut file = open_log_file(id, false);
 
             match writeln!(&mut file, "{}", msg.as_ref()) 
             {
@@ -52,8 +69,6 @@ pub fn log_f<S: AsRef<str>>(msg: S, log_type: LogType, pwd: std::sync::Arc<Pwd>)
 fn form_filepath_from_id(mut path_prefix: String, id: u32) -> String
 {
     let id_s: String = id.to_string();
-
-    path_prefix.push_str("data/");
     if id == 0 {path_prefix.push_str("S")}
 
     path_prefix.push_str(&id_s);
@@ -62,31 +77,22 @@ fn form_filepath_from_id(mut path_prefix: String, id: u32) -> String
     return path_prefix;
 }
 
-fn open_log_file(pwd: Arc<Pwd>, id: u32, meta: bool) -> File
+fn open_log_file(id: u32, meta: bool) -> File
 {
-    if meta == true
+
+    let path: String = match meta
     {
-        match *pwd
-        {
-            Pwd::Gui => return std::fs::OpenOptions::new()
-            .read(false).write(true).create(true).append(true)
-            .open("../../async_net_engine/test.log").unwrap(),
-
-            Pwd::Cli => return std::fs::OpenOptions::new()
-            .read(false).write(true).create(true).append(true)
-            .open("../test.log" ).unwrap(),
-        }
-    }
-
-
-    match *pwd
-    {
-        Pwd::Gui => return std::fs::OpenOptions::new()
-                    .read(false).write(true).create(true).append(true)
-                    .open(form_filepath_from_id("../../async_net_engine/".into(), id) ).unwrap(),
-
-        Pwd::Cli => return std::fs::OpenOptions::new()
-                    .read(false).write(true).create(true).append(true)
-                    .open(form_filepath_from_id("../".into(), id)).unwrap()
+        true => "/tmp/f1_pslr/test.log".into(),
+        false => form_filepath_from_id("/tmp/f1_pslr/data/".into(), id),
     };
+
+
+    return std::fs::OpenOptions::new()
+    .read(false)
+    .write(true)
+    .create(true)
+    .append(true)
+    .open(path).unwrap()
 }
+
+

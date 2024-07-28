@@ -1,9 +1,7 @@
-use std::io::{BufRead, BufReader};
-use std::{io, num::IntErrorKind};
+use std::io::{self, BufRead, BufReader, Read};
 use std::fs::File;
-use crate::get_pwd;
 use crate::interface_structs::HttpRequest;
-use crate::{interface_structs::RequestandPermutation, log::{log_f, LogType}};
+use crate::interface_structs::RequestandPermutation;
 
 #[derive(Debug)]
 pub struct CacheReadError
@@ -99,12 +97,24 @@ pub fn synth_request_groups(http_request: String, permuations_v: Vec<String>) ->
 
 pub fn read_permutation_lines(filepath: &str) -> io::Result<Vec<String>>
 {
-    let file = File::open(filepath)?;
+    let mut file = std::fs::OpenOptions::new()
+    .create(false)
+    .read(true)
+    .write(false)
+    .open(filepath)?;
 
-    let permutation_lines: Vec<String> = BufReader::new(file).lines()
-    .map(|l| l.unwrap() )
+    let mut buffer: String = String::new();
+    file.read_to_string(&mut buffer).unwrap();
+
+    let mut permutation_lines: Vec<String> = buffer
+    .split("\n")
+    .map(|line| line.to_string())
     .collect();
 
+    permutation_lines.pop(); // pop off the \n entry
+
+    println!("[*] PSLR filepath: {}", filepath);
+    println!("{:#?}", &permutation_lines);
     return Ok(permutation_lines);
 }
 

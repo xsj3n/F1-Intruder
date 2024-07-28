@@ -1,5 +1,6 @@
 from burp import IBurpExtender, IContextMenuFactory
 from javax.swing import JMenuItem
+import os
 
 
 class BurpExtender(IBurpExtender, IContextMenuFactory):
@@ -19,7 +20,11 @@ class BurpExtender(IBurpExtender, IContextMenuFactory):
 
     def sendToF1(event):
       request = invocation.getSelectedMessages()[0].getRequest().tostring()
-      file = open("/tmp/request.data", 'w')
+      try:
+        os.mkdir("/tmp/f1_pslr/")
+      except:
+          print("[-] Path is present")
+      file = open("/tmp/f1_pslr/request.data", 'w+')
       file.write(request)
       file.close()
       print(request)

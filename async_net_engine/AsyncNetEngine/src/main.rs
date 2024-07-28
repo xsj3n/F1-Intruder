@@ -1,11 +1,11 @@
-use std::{env::{self, args}, fs::File, io::{self, Read}, process::Command};
+use std::{env, fs::File, io, process::Command};
+
 
 use async_net_spx::configure_workload;
 use parse_util::synth_request_groups;
 use tokio::task::spawn_blocking;
 use fs4::FileExt;
 
-use crate::parse_util::add_clrf_to_arguement_string;
 
 pub mod async_net_spx;
 pub mod interface_structs;
@@ -14,10 +14,12 @@ pub mod log;
 
 
 
+
 #[tokio::main]
 async fn main() // params will be the orginal request, and the permutations
 {
     let file_lock = chk_lock();
+    ensure_tmp_dir();
 
     let args: Vec<String> = env::args().collect();
 
@@ -28,9 +30,22 @@ async fn main() // params will be the orginal request, and the permutations
     };
 
     
-
-    let mut request = args[1].clone().lines().map(|l| l.to_string() + "\r\n") // lines() strips clrf
+    let mut i = 0;
+    let mut request = args[1].clone().lines().map(|l| l.to_string() + "\r\n")
     .filter(|l| !l.contains("Accept-Encoding:"))
+    .map(|l|
+    {
+
+        if i == 0 && l.contains("HTTP/2")
+        {
+            let ns: String = l.replace("HTTP/2","HTTP/1.1");
+            return ns
+        }
+
+        i += 1;
+        return l;
+
+    })
     .collect::<String>()
     .trim().to_string();
     request.push_str("\r\n\r\n");
@@ -60,11 +75,13 @@ async fn main() // params will be the orginal request, and the permutations
     println!("Threads: {}", thread_number);
 
     let request_s_2 = request.clone();
+
     let rp = synth_request_groups(request, permutations);
+
     let total_req_num = rp.permutation.len();
     let rp_v = configure_workload(rp, thread_number);
     
-
+    println!("[*] workload configured!");
     let now = std::time::Instant::now();
     spawn_blocking(move || async
     {
@@ -77,7 +94,7 @@ async fn main() // params will be the orginal request, and the permutations
 }
 
 
-fn run_shell_cmd<C: AsRef<str>>(cmd: C) -> io::Result<String>
+fn _run_shell_cmd<C: AsRef<str>>(cmd: C) -> io::Result<String>
 {
     let mut cmd_parts = cmd.as_ref().split(" ");
     let program = match cmd_parts.next()
@@ -106,7 +123,11 @@ fn run_shell_cmd<C: AsRef<str>>(cmd: C) -> io::Result<String>
 
 fn chk_lock() -> File
 {
-    match std::fs::File::open("/tmp/lock")
+    match std::fs::OpenOptions::new()
+    .read(true)
+    .write(true)
+    .create(true)
+    .open("/tmp/lock")
     {
         Ok(f) => 
         {
@@ -117,16 +138,16 @@ fn chk_lock() -> File
                     println!("[*] Lock acquired...");
                     return f;
                 },
-                Err(_) => 
+                Err(e) => 
                 {
-                    println!("[!] Locked! Exiting...");
+                    println!("[!] Locked! {}...", e.kind());
                     std::process::exit(2);
                 },
             }
         },
-        Err(_) => 
+        Err(err) => 
         {
-            println!("[!] Locked! Exiting...");
+            println!("[!] Locked! {}...", err.kind());
             std::process::exit(2); 
         },
     }
@@ -136,16 +157,8 @@ fn chk_lock() -> File
 
 
 
-fn get_pwd() -> Pwd
+fn ensure_tmp_dir()
 {
-    let pwd_string = run_shell_cmd("pwd").unwrap();    
-    if pwd_string.contains("tauri") {return Pwd::Gui};
-    return Pwd::Cli;    
-}
-
-#[derive(Clone, Copy)]
-pub enum Pwd
-{
-    Gui,
-    Cli
+    std::fs::create_dir_all("/tmp/f1_pslr/data")
+    .unwrap_or(())
 }
