@@ -7,6 +7,8 @@ community edition, but without the throttling.
 It does have it's differences, but it is designed to largely be the same. Even a
 Burpsuite plugin to send a http request that is in burp, directly to the F1-Intruder.
 
+Project status: Pending revamp or deletion. 
+
 ### What's different?
 
 - The rust binary responsible for the networking is written to be asynchronous. The payloads are sent non-sequentially. 
